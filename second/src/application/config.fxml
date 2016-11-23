@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ChoiceBox?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.effect.BoxBlur?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane id="maincontent" fx:id="maincontent" maxHeight="344.0" maxWidth="1600.0" minHeight="344.0" minWidth="600.0" prefHeight="344.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.92" xmlns:fx="http://javafx.com/fxml/1" fx:controller="application.MainGUIController">
+	<top>
+		<Pane prefHeight="72.0" prefWidth="663.0" style="-fx-background-color: #00567F;" BorderPane.alignment="CENTER">
+         <children>
+            <VBox layoutX="-7.0" layoutY="-4.0" prefHeight="204.0" prefWidth="107.0" />
+            <TextArea id="ta" fx:id="ta" layoutX="-1.0" layoutY="29.0" prefHeight="55.0" prefWidth="600.0">
+               <font>
+                  <Font name="Arial" size="16.0" />
+               </font>
+               <effect>
+                  <BoxBlur />
+               </effect>
+            </TextArea>
+            <HBox layoutX="100.0" layoutY="2.0" prefHeight="25.0" prefWidth="562.0">
+               <children>
+                  <Button fx:id="searchBtn" mnemonicParsing="false" text="Search" />
+                  <Button mnemonicParsing="false" text="Save As" />
+                  <Button mnemonicParsing="false" text="Button" />
+                  <ChoiceBox prefWidth="150.0" />
+               </children>
+            </HBox>
+         </children>
+		</Pane>
+	</top>
+	<left>
+		<Pane prefHeight="200.0" prefWidth="98.0" style="-fx-background-color: #33677F;" BorderPane.alignment="CENTER" />
+	</left>
+	<center>
+		<Pane id="MainGUICenter" prefHeight="200.0" prefWidth="200.0" style="-fx-background-color: #4CC5FF;" BorderPane.alignment="CENTER">
+         <children>
+            <TableView layoutX="1.0" prefHeight="200.0" prefWidth="407.0">
+              <columns>
+                <TableColumn prefWidth="75.0" text="C1" />
+                <TableColumn prefWidth="75.0" text="C2" />
+              </columns>
+            </TableView>
+         </children>
+		</Pane>
+	</center>
+	<right>
+		<Pane prefHeight="200.0" prefWidth="92.0" style="-fx-background-color: #33677F;" BorderPane.alignment="CENTER" />
+	</right>
+	<bottom>
+		<Pane prefHeight="72.0" prefWidth="600.0" style="-fx-background-color: #00567F;" BorderPane.alignment="CENTER">
+         <children>
+            <TextArea layoutX="88.0" prefHeight="76.0" prefWidth="429.0" />
+         </children></Pane>
+	</bottom>
+</BorderPane>

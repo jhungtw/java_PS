@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.String?>
+<?import javafx.collections.FXCollections?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.Cursor?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.effect.Light.Distant?>
+<?import javafx.scene.effect.Lighting?>
+<?import javafx.scene.effect.Shadow?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane id="maincontent" fx:id="maincontent" maxHeight="600.0" maxWidth="1600.0" minHeight="600.0" minWidth="800.0" prefHeight="600.0" prefWidth="808.0" xmlns="http://javafx.com/javafx/8.0.92" xmlns:fx="http://javafx.com/fxml/1" fx:controller="application.MainGUIController">
+	<top>
+		<Pane minHeight="-Infinity" minWidth="-Infinity" prefHeight="246.0" prefWidth="800.0" style="-fx-background-color: #00567F;" BorderPane.alignment="CENTER">
+			<children>
+				<VBox layoutX="-7.0" layoutY="-4.0" prefHeight="204.0" prefWidth="107.0" />
+				<TextArea id="ta" fx:id="ta" layoutX="-1.0" layoutY="81.0" nodeOrientation="LEFT_TO_RIGHT" opacity="0.81" prefHeight="165.0" prefWidth="809.0" promptText="select * from {twmcustomer}" scrollLeft="10.0" scrollTop="10.0" wrapText="true">
+					<font>
+						<Font name="Bell MT" size="18.0" />
+					</font>
+				</TextArea>
+				<HBox layoutX="100.0" layoutY="2.0" prefHeight="50.0" prefWidth="700.0">
+					<children>
+						<Button fx:id="searchBtn" mnemonicParsing="false" onAction="#search" prefHeight="29.0" prefWidth="66.0" style="-fx-background-color: #9C4F17;" text="Search" textAlignment="CENTER" textFill="#f2e9e9">
+							<HBox.margin>
+								<Insets right="5.0" top="5.0" />
+							</HBox.margin>
+                     <effect>
+                        <Lighting>
+                           <bumpInput>
+                              <Shadow />
+                           </bumpInput>
+                           <light>
+                              <Light.Distant />
+                           </light>
+                        </Lighting>
+                     </effect>
+                     <font>
+                        <Font name="Bell MT Bold" size="14.0" />
+                     </font>
+						</Button>
+						<Button fx:id="saveas" mnemonicParsing="false" onAction="#SaveAsFile" prefHeight="28.0" prefWidth="68.0" style="-fx-background-color: #9C4F17;" text="Save As" textFill="#eee9e9">
+							<HBox.margin>
+								<Insets right="5.0" top="5.0" />
+							</HBox.margin>
+                     <effect>
+                        <Lighting>
+                           <bumpInput>
+                              <Shadow />
+                           </bumpInput>
+                           <light>
+                              <Light.Distant />
+                           </light>
+                        </Lighting>
+                     </effect>
+                     <font>
+                        <Font name="Bell MT Bold" size="14.0" />
+                     </font>
+						</Button>
+						<Button fx:id="folder" mnemonicParsing="false" onAction="#CheckFolder" prefHeight="29.0" prefWidth="80.0" style="-fx-background-color: #9C4F17;" text="Folder" textFill="#fcf8f8">
+							<HBox.margin>
+								<Insets right="5.0" top="5.0" />
+							</HBox.margin>
+                     <effect>
+                        <Lighting>
+                           <bumpInput>
+                              <Shadow />
+                           </bumpInput>
+                           <light>
+                              <Light.Distant />
+                           </light>
+                        </Lighting>
+                     </effect>
+						</Button>
+						<VBox prefHeight="200.0" prefWidth="100.0">
+							<children>
+								<Label text="Environment" textFill="#f5eded" underline="true" />
+								<ComboBox fx:id="env" onAction="#ChangeEnv" prefWidth="150.0" value="Local">
+									<items>
+										<FXCollections fx:factory="observableArrayList">
+											<String fx:value="Prod" />
+											<String fx:value="BugFix" />
+											<String fx:value="UAT" />
+											<String fx:value="Local" />
+										</FXCollections>
+									</items>
+								</ComboBox>
+							</children>
+                     <HBox.margin>
+                        <Insets left="10.0" />
+                     </HBox.margin>
+						</VBox>
+						<VBox prefHeight="200.0" prefWidth="100.0">
+							<children>
+								<Label text="Output" textFill="#f0eded" textOverrun="CLIP" underline="true" />
+								<ComboBox fx:id="format" prefWidth="150.0" value="EXCEL">
+									<items>
+										<FXCollections fx:factory="observableArrayList">
+											<String fx:value="CSV" />
+											<String fx:value="EXCEL" />
+										</FXCollections>
+									</items>
+								</ComboBox>
+							</children>
+                     <HBox.margin>
+                        <Insets left="3.0" />
+                     </HBox.margin>
+						</VBox>
+                  <VBox fx:id="qvbox" prefHeight="50.0" prefWidth="280.0">
+                     <children>
+                        <Label text="Sample Query" textFill="#ebe2e2" underline="true" />
+                        <ComboBox fx:id="query" onAction="#AddQueryToTxttArea" prefHeight="25.0" prefWidth="282.0" />
+                     </children>
+                     <HBox.margin>
+                        <Insets left="5.0" />
+                     </HBox.margin>
+                  </VBox>
+					</children>
+				</HBox>
+            <HBox layoutX="310.0" layoutY="45.0" prefHeight="30.0" prefWidth="490.0">
+               <children>
+                  <Label prefHeight="17.0" prefWidth="80.0" text="FIle:" textFill="#ebe3e3" />
+                  <TextField fx:id="path" prefHeight="30.0" prefWidth="486.0" text="c:\\tmp\\out.xlsx">
+                     <font>
+                        <Font size="14.0" />
+                     </font>
+                  </TextField>
+               </children>
+            </HBox>
+			</children>
+		</Pane>
+	</top>
+	<left>
+		<Pane prefHeight="136.0" prefWidth="18.0" style="-fx-background-color: #33677F;" BorderPane.alignment="CENTER" />
+	</left>
+	<center>
+		<Pane id="MainGUICenter" prefHeight="295.0" prefWidth="751.0">
+			<children>
+				<TableView fx:id="tableview" layoutY="4.0" prefHeight="353.0" prefWidth="507.0">
+					<padding>
+						<Insets bottom="5.0" top="5.0" />
+					</padding>
+               <cursor>
+                  <Cursor fx:constant="DEFAULT" />
+               </cursor>
+				</TableView>
+			</children>
+		</Pane>
+	</center>
+	<right>
+		<Pane prefHeight="136.0" prefWidth="31.0" style="-fx-background-color: #33677F;" BorderPane.alignment="CENTER" />
+	</right>
+	<bottom>
+		<Pane prefHeight="72.0" prefWidth="600.0" style="-fx-background-color: #00567F;" BorderPane.alignment="CENTER">
+			<children>
+				<TextArea fx:id="buttomta" layoutX="18.0" prefHeight="76.0" prefWidth="751.0" />
+			</children>
+		</Pane>
+	</bottom>
+</BorderPane>
