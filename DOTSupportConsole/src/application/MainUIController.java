@@ -8,6 +8,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +22,7 @@ import com.opencsv.bean.ColumnPositionMappingStrategy;
 import com.opencsv.bean.CsvToBean;
 
 import application.model.Query;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -78,7 +80,7 @@ public class MainUIController implements Initializable {
 		DisableVisualsWhenSearch();
 		ResultSet rs;
 		Connection connection;
-		log.setText("search is starting \n");
+		updateStatus(new Date().toString() + " | " + "search is starting \n");
 		headers = new ArrayList<String>();
 		rows = new ArrayList<ArrayList<String>>();
 		/*
@@ -121,7 +123,7 @@ public class MainUIController implements Initializable {
 			rs.close();
 
 			connection.close();
-			log.appendText("search is successfully");
+			updateStatus(new Date().toString() + " | " + "search is done \n");
 
 		} catch (Exception e) {
 
@@ -129,8 +131,7 @@ public class MainUIController implements Initializable {
 
 			e.printStackTrace();
 			// log.appendText(e.getMessage());
-		}
-		finally{
+		} finally {
 			EnableVisualsSearchDone();
 		}
 
@@ -170,16 +171,17 @@ public class MainUIController implements Initializable {
 
 	@FXML
 	void save(ActionEvent event) {
-		log.setText("save is starting");
+		updateStatus(new Date().toString() + " | " + "save is starting \n");
 
 		if (headers.size() > 0) {
 			ExportTool et = new ExportTool();
 			try {
 				et.convertToExcel(headers, rows, "c:\\tmp\\out.xlsx");
-				log.appendText("save is successfully");
+				updateStatus(new Date().toString() + " | " + "save is done \n");
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
-				log.appendText(e.getMessage());
+				updateStatus(new Date().toString() + " | " + e.getMessage() + "\n");
+
 				e.printStackTrace();
 			}
 		}
@@ -188,11 +190,11 @@ public class MainUIController implements Initializable {
 
 	@FXML
 	private void AddQueryToTxttArea(ActionEvent event) {
-		log.appendText("Add query clicked");
+		updateStatus(new Date().toString() + " | " + "Add query clicked \n");
 
 		queryinput.setText(querySel.get(query.getValue()).getQuery());
 
-		log.appendText("Add query done");
+		updateStatus(new Date().toString() + " | " + "Add query done \n");
 
 	}
 
@@ -237,7 +239,7 @@ public class MainUIController implements Initializable {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			log.setText(e.getMessage());
+			updateStatus(new Date().toString() + " | " + e.getMessage());
 		}
 
 	}
@@ -256,6 +258,14 @@ public class MainUIController implements Initializable {
 		save.setDisable(false);
 		env.setDisable(false);
 
+	}
+
+	private void updateStatus(String message) {
+		if (Platform.isFxApplicationThread()) {
+			log.appendText(message);
+		} else {
+			Platform.runLater(() -> log.appendText(message));
+		}
 	}
 
 }

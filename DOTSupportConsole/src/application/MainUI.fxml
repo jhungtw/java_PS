@@ -22,8 +22,8 @@
 						<Font name="Arial" size="16.0" />
 					</font>
 				</TextArea>
-				<WebView fx:id="view" prefHeight="526.0" prefWidth="715.0" />
-				<TextArea fx:id="log" prefHeight="71.0" prefWidth="1031.0" />
+				<WebView fx:id="view" prefHeight="220.0" prefWidth="1031.0" />
+				<TextArea fx:id="log" prefHeight="145.0" prefWidth="1031.0" />
 			</children>
 		</VBox>
 	</center>
