@@ -17,7 +17,7 @@
 	<center>
 		<VBox prefHeight="365.0" prefWidth="675.0" BorderPane.alignment="CENTER">
 			<children>
-				<TextArea fx:id="queryinput" prefHeight="359.0" prefWidth="1031.0" promptText="enter query string">
+				<TextArea fx:id="queryinput" prefHeight="359.0" prefWidth="1031.0" promptText="enter query string" wrapText="true">
 					<font>
 						<Font name="Arial" size="16.0" />
 					</font>

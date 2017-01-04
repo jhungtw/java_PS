@@ -1,5 +1,7 @@
 package application;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.URL;
@@ -16,12 +18,15 @@ import java.util.ResourceBundle;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.yaml.snakeyaml.Yaml;
 
 import com.opencsv.CSVReader;
 import com.opencsv.bean.ColumnPositionMappingStrategy;
 import com.opencsv.bean.CsvToBean;
 
 import application.model.Query;
+import application.model.MapBean;
+import application.model.Report;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -71,7 +76,7 @@ public class MainUIController implements Initializable {
 	private String HYBRIS_USER = "jhung";
 	private String HYBRIS_PASSWORD = "hhj1101";
 
-	private Map<String, Query> querySel;
+	private Map<String, Report> querySel;
 	private ArrayList<String> headers = new ArrayList<String>();
 	private ArrayList<ArrayList<String>> rows = new ArrayList<ArrayList<String>>();
 
@@ -83,22 +88,8 @@ public class MainUIController implements Initializable {
 		updateStatus(new Date().toString() + " | " + "search is starting \n");
 		headers = new ArrayList<String>();
 		rows = new ArrayList<ArrayList<String>>();
-		/*
-		 * // add 4 different values to list headers.add("eBay");
-		 * headers.add("Paypal"); headers.add("Name"); headers.add("email");
-		 * 
-		 * ArrayList<ArrayList<String>> rows = new
-		 * ArrayList<ArrayList<String>>();
-		 * 
-		 * List<String> r1 = new ArrayList<String>(); r1.add("1"); r1.add("2");
-		 * r1.add("300000"); r1.add("400000"); List<String> r2 = new
-		 * ArrayList<String>(); r2.add("1"); r2.add("2"); r2.add(
-		 * "3000001111111111111111111111111111111111111111111111111111111111111111111111111111"
-		 * ); r2.add("400000"); List<String> r3 = new ArrayList<String>();
-		 * r3.add("1"); r3.add("2"); r3.add("300000"); r3.add("400000");
-		 * rows.add((ArrayList<String>)r1); rows.add((ArrayList<String>) r2);
-		 * rows.add((ArrayList<String>) r3);
-		 */
+	
+	
 		try {
 
 			StringBuilder FQSB = new StringBuilder();
@@ -192,7 +183,7 @@ public class MainUIController implements Initializable {
 	private void AddQueryToTxttArea(ActionEvent event) {
 		updateStatus(new Date().toString() + " | " + "Add query clicked \n");
 
-		queryinput.setText(querySel.get(query.getValue()).getQuery());
+		queryinput.setText(querySel.get(query.getValue()).getContent());
 
 		updateStatus(new Date().toString() + " | " + "Add query done \n");
 
@@ -209,15 +200,20 @@ public class MainUIController implements Initializable {
 	public void initialize(URL location, ResourceBundle resources) {
 		// TODO Auto-generated method stub
 		engine = view.getEngine();
-		initData();
+		try {
+			initData();
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 
 	}
 
-	private void initData() {
+	private void initData() throws FileNotFoundException {
 
-		querySel = new HashMap<String, Query>();
+		querySel = new HashMap<String, Report>();
 		ObservableList<String> options = FXCollections.observableArrayList();
-
+		/*
 		ColumnPositionMappingStrategy strat = new ColumnPositionMappingStrategy();
 		strat.setType(Query.class);
 		String[] columns = new String[] { "key", "type", "name", "query", "email" };
@@ -240,7 +236,29 @@ public class MainUIController implements Initializable {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			updateStatus(new Date().toString() + " | " + e.getMessage());
-		}
+		}*/
+		
+		
+
+
+	
+			FileReader reader = new FileReader(new File("c:\\tmp\\configuration1.properties"));
+			Yaml yaml = new Yaml();
+			MapBean parsed = yaml.loadAs(reader, MapBean.class);
+			
+			Map<String, Report> data = parsed.getReports();
+			
+			for (String entry : data.keySet()) {
+				System.out.println("Key : " + entry + " Value : " + data.get(entry).toDisplayName());
+				options.add(entry + "-" + data.get(entry).toDisplayName());
+				querySel.put(entry + "-" + data.get(entry).toDisplayName(), data.get(entry));
+			}
+			
+		
+			query.setItems(options);
+		
+		
+		
 
 	}
 

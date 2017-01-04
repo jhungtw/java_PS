@@ -24,5 +24,6 @@
 	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/lib/commons-collections-3.2.1.jar"/>
 	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/lib/commons-lang3-3.4.jar"/>
 	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/lib/commons-logging-1.1.1.jar"/>
+	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/lib/snakeyaml-1.17.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
