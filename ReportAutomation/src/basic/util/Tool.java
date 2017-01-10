@@ -3,13 +3,20 @@ package basic.util;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 import javax.activation.DataHandler;
@@ -32,9 +39,128 @@ import org.apache.log4j.Logger;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.yaml.snakeyaml.Yaml;
+
+import basic.config.DoneStatus;
+import basic.config.Report;
+import basic.config.StatusMapBean;
 
 public class Tool {
 	private static Logger accessLog = Logger.getLogger("ReportAutomationLog");
+
+	public static Map<String, Report> disableIrrelevantReports(Map<String, Report> reports) {
+
+		Calendar today = Calendar.getInstance();
+		
+		 // test monday as 1 st day of month 
+		 //today.set(2017, 4, 1);
+		 // test monday  
+		// today.set(2017, 0, 2);
+		// test 1 st day of month 
+		//today.set(2017, 0, 11);
+		
+		today.setFirstDayOfWeek(Calendar.MONDAY);
+		
+		System.out.println("today: "+today.getTime().toString());
+
+		boolean isMonth = (today.get(Calendar.DAY_OF_MONTH) == 1);
+		boolean isWeek = (today.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY);
+		
+		System.out.println("isMonth//isWeek : "+isMonth+"//" +isWeek);
+
+		if ( !isWeek) {
+
+			for (String entry : reports.keySet()) {
+				if (reports.get(entry).getFrequency().equalsIgnoreCase(ReportFrequency.WEEK.toString()))
+					reports.get(entry).setEnabled(false);
+				System.out.println("Key : " + entry + " Value : " + reports.get(entry).toString());
+
+			}
+
+		}
+
+		if ( !isMonth)
+
+		{
+			for (String entry : reports.keySet()) {
+				System.out.println("-->Key : " + entry + " Value : " + reports.get(entry).toString());
+				if (reports.get(entry).getFrequency().equalsIgnoreCase(ReportFrequency.MONTH.toString()))
+					reports.get(entry).setEnabled(false);
+				System.out.println("Key : " + entry + " Value : " + reports.get(entry).toString());
+
+			}
+		}
+		System.out.println("reports is : "+reports.toString());
+		return reports;
+
+	}
+
+	public static void addStatusForRerun(String reportid, String name, boolean status, String filepath)
+			throws IOException {
+
+		// Path path = Paths.get(filepath);
+
+		if (Files.notExists(Paths.get(filepath))) {
+
+			Files.createFile(Paths.get(filepath));
+			DoneStatus ds = new DoneStatus();
+			ds.setDone(status);
+			ds.setName(name);
+			Map<String, DoneStatus> reports = new HashMap<String, DoneStatus>();
+			reports.put(reportid, ds);
+			StatusMapBean parsed = new StatusMapBean();
+			parsed.setReports(reports);
+			FileWriter writer = new FileWriter(filepath);
+			Yaml yaml = new Yaml();
+			yaml.dump(parsed, writer);
+
+		} else {
+			FileReader reader = new FileReader(new File(filepath));
+			Yaml yaml = new Yaml();
+
+			StatusMapBean parsed = yaml.loadAs(reader, StatusMapBean.class);
+			Map<String, DoneStatus> reports = parsed.getReports();
+			if (reports.containsKey(reportid)) {
+				DoneStatus ds = reports.get(reportid);
+				ds.setDone(status);
+				ds.setName(name);
+				// implement key is found
+				reports.put(reportid, ds);
+
+			} else {
+				DoneStatus ds = new DoneStatus();
+				ds.setDone(status);
+				ds.setName(name);
+				// implement key is found
+				reports.put(reportid, ds);
+			}
+
+			parsed.setReports(reports);
+			FileWriter writer = new FileWriter(filepath);
+			yaml.dump(parsed, writer);
+
+		}
+
+	}
+
+	public static ArrayList<String> getReportsForRerun(String filepath) throws FileNotFoundException {
+
+		ArrayList<String> ret = new ArrayList<String>();
+		FileReader reader = new FileReader(new File(filepath));
+		Yaml yaml = new Yaml();
+		StatusMapBean parsed = yaml.loadAs(reader, StatusMapBean.class);
+
+		Map<String, DoneStatus> reports = parsed.getReports();
+
+		for (String entry : reports.keySet()) {
+			System.out.println("Key : " + entry + " Value : " + reports.get(entry).toString());
+			if (!reports.get(entry).isDone())
+				ret.add(entry);
+
+		}
+		return ret;
+
+	}
 
 	public static String getHybrisDriverURL(String env) {
 		String HYBRIS_DRIVER_URL = null;
@@ -84,9 +210,9 @@ public class Tool {
 		ArrayList<ArrayList<String>> rows = new ArrayList<ArrayList<String>>();
 
 		headers = getHeadersFromResultset(rs);
-		accessLog.info("headers" + headers.size());
+		// accessLog.info("headers" + headers.size());
 		rows = getRowsFromResultset(rs);
-		accessLog.info("rows" + rows.size());
+		// accessLog.info("rows" + rows.size());
 
 		// String filepath = null;
 
@@ -126,6 +252,7 @@ public class Tool {
 		FileOutputStream out = new FileOutputStream(new File(filepath));
 		wb.write(out);
 		out.close();
+		wb.close();
 
 	}
 
@@ -163,6 +290,12 @@ public class Tool {
 
 	}
 
+	public static boolean isFirstDayOfThisWeek(Calendar today) {
+
+		return (today.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY);
+
+	}
+
 	public static String getFirstDayOfThisMonth(String format) {
 		Calendar c = Calendar.getInstance();
 
@@ -171,6 +304,12 @@ public class Tool {
 		DateFormat df = new SimpleDateFormat(format);
 
 		return df.format(c.getTime());
+
+	}
+
+	public static boolean isFirstDayOfThisMonth(Calendar today) {
+
+		return (today.get(Calendar.DAY_OF_MONTH) == 1);
 
 	}
 
@@ -196,7 +335,7 @@ public class Tool {
 	}
 
 	public static String getFinalDayOfLastWeek(String format) {
-		Calendar rightNow = Calendar.getInstance();
+		// Calendar rightNow = Calendar.getInstance();
 		Calendar c = Calendar.getInstance();
 		c.add(Calendar.DATE, -7);
 
@@ -287,7 +426,7 @@ public class Tool {
 		ArrayList<String> headers = new ArrayList<String>();
 		for (int i = 0; i < rs.getMetaData().getColumnCount(); i++) {
 			// We are using non property style for making dynamic table
-			final int j = i;
+			// final int j = i;
 			headers.add(rs.getMetaData().getColumnLabel(i + 1));
 			/*
 			 * System.out.println(">>>"+rs.getMetaData().getColumnName(i+1));

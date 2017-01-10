@@ -22,6 +22,7 @@ import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 
 import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 
@@ -39,7 +40,9 @@ import org.yaml.snakeyaml.Yaml;
 
 import basic.config.MapBean;
 import basic.config.Report;
+import basic.util.ExecutionStrategy;
 import basic.util.ReportFrequency;
+import basic.util.Tool;
 
 import static org.quartz.CronScheduleBuilder.cronSchedule;
 import static org.quartz.JobBuilder.newJob;
@@ -58,6 +61,24 @@ public class ReportAutomation {
 	static String smtp_user;
 	static String smtp_password;
 	static String production_mode;
+	static final String progressfilename = "progress.txt";
+
+	public void rerun() throws Exception {
+
+		// check file exists
+		// if not
+
+		// if yes
+
+		// check not done report
+
+		// if not exists
+		// remove file
+
+		// if exists
+		// run report
+
+	}
 
 	public void run() throws Exception {
 
@@ -76,11 +97,15 @@ public class ReportAutomation {
 		// job 1 will run every 20 seconds
 
 		int numberOfReport = 0;
+		Calendar now = Calendar.getInstance();
+
+		System.out.println("Time is " + now.getTime().toString());
 
 		// *********************************************************************************
-		if (production_mode == "enabled") {
+		if (production_mode.equalsIgnoreCase("enabled")) {
 
 			System.out.println("Run with Production Mode");
+
 			for (String entry : reports.keySet()) {
 				// System.out.println("Key : " + entry + " Value : " +
 				// reports.get(entry).toString());
@@ -92,11 +117,27 @@ public class ReportAutomation {
 				if (reports.get(entry).isEnabled()) {
 					System.out.println(reports.get(entry).getName() + " is enabled");
 					job = setJobDetail(entry, reports.get(entry));
-					CronTrigger trigger = newTrigger().withIdentity("trigger" + numberOfReport, "group1")
-							.withSchedule(cronSchedule(reports.get(entry).getSchedule())).build();
-					sched.scheduleJob(job, trigger);
-					accessLog.info(job.getKey() + " has been scheduled to run at and repeat based on expression: "
-							+ ((CronTrigger) trigger).getCronExpression());
+					Trigger trigger = null;
+					if (configs.get("exec.strategy").equalsIgnoreCase(ExecutionStrategy.CRON_EXPRESSION.toString())) {
+
+						trigger = (CronTrigger) newTrigger().withIdentity("trigger" + numberOfReport, "group1")
+								.withSchedule(cronSchedule(reports.get(entry).getSchedule())).build();
+						sched.scheduleJob(job, trigger);
+						accessLog.info(job.getKey() + " has been scheduled to run at and repeat based on expression: "
+								+ ((CronTrigger) trigger).getCronExpression());
+					}
+
+					if (configs.get("exec.strategy").equalsIgnoreCase(ExecutionStrategy.FIXED_INTERVAL.toString())) {
+						System.out.println("Before adding interval: Time is " + now.getTime().toString());
+
+						now.add(Calendar.SECOND, (Integer.parseInt(configs.get("exec.interval")) * numberOfReport));
+
+						System.out.println("Before generate Trigger: Time is " + now.getTime().toString());
+						trigger = (SimpleTrigger) newTrigger().withIdentity("trigger" + numberOfReport, "group1")
+								.startAt(now.getTime()).build();
+						sched.scheduleJob(job, trigger);
+						accessLog.info(job.getKey() + " has been scheduled to run at  " + trigger.getStartTime());
+					}
 
 				} else {
 					System.out.println(reports.get(entry).getName() + " is disabled");
@@ -106,6 +147,7 @@ public class ReportAutomation {
 		} else {
 
 			System.out.println("Run with Test Mode");
+
 			for (String entry : reports.keySet()) {
 				// System.out.println("Key : " + entry + " Value : " +
 				// reports.get(entry).toString());
@@ -117,13 +159,12 @@ public class ReportAutomation {
 				if (reports.get(entry).isEnabled()) {
 					System.out.println(reports.get(entry).getName() + " is enabled");
 					job = setJobDetail(entry, reports.get(entry));
-					Calendar now = Calendar.getInstance();
+
 					now.add(Calendar.SECOND, (30 * numberOfReport));
 					SimpleTrigger trigger = (SimpleTrigger) newTrigger()
 							.withIdentity("trigger" + numberOfReport, "group1").startAt(now.getTime()).build();
 					sched.scheduleJob(job, trigger);
-					accessLog.info(job.getKey() + " has been scheduled to run at and repeat based on expression: "
-							+ trigger.getStartTime());
+					accessLog.info(job.getKey() + " has been scheduled to run at " + trigger.getStartTime());
 
 				} else {
 					System.out.println(reports.get(entry).getName() + " is disabled");
@@ -148,7 +189,17 @@ public class ReportAutomation {
 
 		{
 			// wait five minutes to show jobs
-			Thread.sleep(100L * 1000L);
+			// Thread.sleep(3L * 60L * 1000L);
+
+			if (production_mode.equalsIgnoreCase("enabled")) {
+
+				Thread.sleep(
+						Math.abs(now.getTimeInMillis() - Calendar.getInstance().getTimeInMillis()) + 5L * 60L * 1000L);
+
+			} else {
+				Thread.sleep(3L * 60L * 1000L);
+			}
+
 			// executing...
 		} catch (Exception e) {
 			//
@@ -172,12 +223,43 @@ public class ReportAutomation {
 		readConfig();
 		initLogger();
 		accessLog = Logger.getLogger("ReportAutomationLog");
+		accessLog.setLevel(Level.INFO);
 
-		ReportAutomation ra = new ReportAutomation();
-		ra.run();
+		// disable monthly report on 1st day of week, or disable weekly report
+		// on 1st day of month
+
+		// if no enabled report exists, end execution.
+
+		// Disable reports not in right schedule
+
+		reports = Tool.disableIrrelevantReports(reports);
+		boolean exeflag = false;
+		for (String entry : reports.keySet()) {
+			System.out.println("Key : " + entry + " Value : " + reports.get(entry).toString());
+			if (reports.get(entry).isEnabled())
+				exeflag = true;
+		}
+
+		accessLog.info("Disable reports not in right schedule is done");
+
+		if (exeflag) {
+			accessLog.info("Starting report automation program");
+			ReportAutomation ra = new ReportAutomation();
+			ra.run();
+		}
+		else
+		{
+			accessLog.info("No report is enabled. Report automation program will be terminated");
+			
+		}
+		/*
+		 * int NumberOfRerun = 0; while (NumberOfRerun < 3) { NumberOfRerun++;
+		 * accessLog.info("Re-run not done reports: " + NumberOfRerun +
+		 * " time"); ra.rerun();
+		 * accessLog.info("Re-run not done reports is done"); }
+		 */
 
 	}
-
 
 	public static void initLogger() {
 		try {
@@ -191,6 +273,8 @@ public class ReportAutomation {
 			appender.setMaxFileSize("1MB");
 			appender.activateOptions();
 			Logger.getRootLogger().addAppender(appender);
+			Logger.getRootLogger().setLevel(Level.INFO);
+
 			// Logger.getRootLogger().addAppender(cappender);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -199,8 +283,6 @@ public class ReportAutomation {
 
 	private static void readConfig() throws FileNotFoundException {
 
-		// FileReader reader = new FileReader(new
-		// File("c:\\psalets\\stuckorder.properties"));
 		FileReader reader = new FileReader(new File(configfile));
 
 		Yaml yaml = new Yaml();
@@ -230,10 +312,8 @@ public class ReportAutomation {
 
 	private static JobDetail setJobDetail(String entry, Report report) {
 		JobDetail jd = null;
-		
-		
 
-		if (production_mode == "enabled") {
+		if (production_mode.equalsIgnoreCase("enabled")) {
 			jd = newJob(ReportJob.class).withIdentity(entry, "group1")
 					.usingJobData("query", reports.get(entry).getContent()).usingJobData("hybris.user", hybris_user)
 					.usingJobData("hybris.password", hybris_pass).usingJobData("smtp.user", smtp_user)
@@ -254,9 +334,8 @@ public class ReportAutomation {
 					.usingJobData("report.name", reports.get(entry).getName()).usingJobData("report.key", entry)
 					.usingJobData("temp.folder", configs.get("temp.folder"))
 					.usingJobData("hybris.env", configs.get("hybris.env"))
-					.usingJobData("report.frequency", reports.get(entry).getFrequency())
-					.build();
-			                                                  
+					.usingJobData("report.frequency", reports.get(entry).getFrequency()).build();
+
 		}
 
 		return jd;

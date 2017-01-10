@@ -67,31 +67,24 @@ public class ReportJob implements Job {
 
 			String HYBRIS_DRIVER_URL = Tool.getHybrisDriverURL(data.getString("hybris.env"));
 
-			// String HYBRIS_USER = "jhung";
 			String HYBRIS_USER = data.getString("hybris.user");
 
-			// String HYBRIS_PASSWORD = "hhj1101";
 			String HYBRIS_PASSWORD = data.getString("hybris.password");
 
-			// TODO Auto-generated method stub
-			// String query = data.getString("query");
-			String query=null;
+			String query = null;
 			switch (data.getString("report.frequency")) {
 			case "MONTH":
 				query = Tool.addQueryInterval(data.getString("query"), Tool.getFirstDayOfLastMonth("YYYY-MM-dd"),
 						Tool.getFirstDayOfThisMonth("YYYY-MM-dd"));
 				break;
 			case "WEEK":
-				 query = Tool.addQueryInterval(data.getString("query"), Tool.getFirstDayOfLastWeek("YYYY-MM-dd"),
+				query = Tool.addQueryInterval(data.getString("query"), Tool.getFirstDayOfLastWeek("YYYY-MM-dd"),
 						Tool.getFirstDayOfThisWeek("YYYY-MM-dd"));
 				break;
 			default:
-				
+
 				break;
 			}
-
-			//String query = Tool.addQueryInterval(data.getString("query"), Tool.getFirstDayOfLastWeek("YYYY-MM-dd"),
-			//		Tool.getFirstDayOfThisWeek("YYYY-MM-dd"));
 
 			accessLog.info("Fexiable query is : " + query);
 
@@ -103,6 +96,8 @@ public class ReportJob implements Job {
 
 			rs = stmt.executeQuery(query);
 
+			accessLog.info("Search is done ");
+
 			// ***********************************************************
 			// implement save file
 			// ***********************************************************
@@ -111,21 +106,25 @@ public class ReportJob implements Job {
 					data.getString("temp.folder"));
 
 			Tool.saveResultsetToExcel(data.getString("report.name"), rs, filepath);
+			accessLog.info("Saved output as " + filepath);
 
-			while (rs.next())
-				System.out.println("rowcount is " + rs.getInt(1));
-			rs.close();
-			stmt.close();
-			connection.close();
-
+			/*
+			 * rs.close(); stmt.close(); connection.close();
+			 */
 			Tool.sendNotification(data.getString("smtp.user"), data.getString("smtp.password"),
 					data.getString("email.to"), data.getString("email.cc"), data.getString("report.name"), filepath);
 
 		} catch (Exception e) {
+			// implement log job status is not done
+
+			// implement log job status is not done
 			e.printStackTrace();
 		}
 
 		finally {
+			// implement log job status is done
+
+			// implement log job status is done
 			if (rs != null)
 				try {
 					rs.close();
