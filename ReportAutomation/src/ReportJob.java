@@ -106,13 +106,22 @@ public class ReportJob implements Job {
 					data.getString("temp.folder"));
 
 			Tool.saveResultsetToExcel(data.getString("report.name"), rs, filepath);
-			accessLog.info("Saved output as " + filepath);
 
-			/*
-			 * rs.close(); stmt.close(); connection.close();
-			 */
-			Tool.sendNotification(data.getString("smtp.user"), data.getString("smtp.password"),
-					data.getString("email.to"), data.getString("email.cc"), data.getString("report.name"), filepath);
+			accessLog.info("Saved output as " + filepath);
+			// PII data?
+			// System.out.println(">>>>>>>>>>>>>>>>>" + filepath);
+			// System.out.println(">>>>>>>>>>>>>>>>>" +
+			// data.getBooleanValue("password.protected"));
+			// PII data
+			if (data.getBooleanValue("password.protected")) {
+				filepath = Tool.packLocal(filepath, data.getString("password"));
+			}
+
+			// System.out.println(">>>>>>>>>>>>>>>>>" + filepath);
+
+			Tool.sendEmailByTWMSmtp(data.getString("smtp.user"), data.getString("email.to"), data.getString("email.cc"),
+					data.getString("report.name"), filepath);
+			accessLog.info("Send email is done ");
 
 		} catch (Exception e) {
 			// implement log job status is not done

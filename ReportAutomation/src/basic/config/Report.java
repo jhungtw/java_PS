@@ -6,6 +6,20 @@ public class Report {
 	private boolean enabled;
 	private String frequency;
 	private String content;
+	private boolean password_protected; 
+	private String password;
+	public String getPassword() {
+		return password;
+	}
+	public void setPassword(String password) {
+		this.password = password;
+	}
+	public boolean isPassword_protected() {
+		return password_protected;
+	}
+	public void setPassword_protected(boolean password_protected) {
+		this.password_protected = password_protected;
+	}
 	private String email_to;
 	private String email_cc;
 	private String schedule;

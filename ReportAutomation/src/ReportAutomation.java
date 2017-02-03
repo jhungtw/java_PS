@@ -231,8 +231,10 @@ public class ReportAutomation {
 		// if no enabled report exists, end execution.
 
 		// Disable reports not in right schedule
-
-		reports = Tool.disableIrrelevantReports(reports);
+		// remove reports not in right schedule
+		if (production_mode.equalsIgnoreCase("enabled")) {
+			reports = Tool.disableIrrelevantReports(reports);
+		}
 		boolean exeflag = false;
 		for (String entry : reports.keySet()) {
 			System.out.println("Key : " + entry + " Value : " + reports.get(entry).toString());
@@ -241,16 +243,14 @@ public class ReportAutomation {
 		}
 
 		accessLog.info("Disable reports not in right schedule is done");
-
+        // When enabled report exists, run reportautomation
 		if (exeflag) {
 			accessLog.info("Starting report automation program");
 			ReportAutomation ra = new ReportAutomation();
 			ra.run();
-		}
-		else
-		{
+		} else {
 			accessLog.info("No report is enabled. Report automation program will be terminated");
-			
+
 		}
 		/*
 		 * int NumberOfRerun = 0; while (NumberOfRerun < 3) { NumberOfRerun++;
@@ -291,7 +291,7 @@ public class ReportAutomation {
 		configs = parsed.getConfigrations();
 
 		for (String entry : configs.keySet()) {
-			System.out.println("Key : " + entry + " Value : " + configs.get(entry).toString());
+			System.out.println("Key : " + entry + " Value : " + configs.get(entry));
 
 		}
 
@@ -316,8 +316,11 @@ public class ReportAutomation {
 		if (production_mode.equalsIgnoreCase("enabled")) {
 			jd = newJob(ReportJob.class).withIdentity(entry, "group1")
 					.usingJobData("query", reports.get(entry).getContent()).usingJobData("hybris.user", hybris_user)
-					.usingJobData("hybris.password", hybris_pass).usingJobData("smtp.user", smtp_user)
+					.usingJobData("hybris.password", hybris_pass)
+					.usingJobData("smtp.user", smtp_user)
 					.usingJobData("smtp.password", smtp_password)
+					.usingJobData("password.protected", reports.get(entry).isPassword_protected())
+					.usingJobData("password", reports.get(entry).getPassword())
 					.usingJobData("email.to", reports.get(entry).getEmail_to())
 					.usingJobData("email.cc", reports.get(entry).getEmail_cc())
 					.usingJobData("report.name", reports.get(entry).getName()).usingJobData("report.key", entry)
@@ -328,9 +331,13 @@ public class ReportAutomation {
 		} else {
 			jd = newJob(ReportJob.class).withIdentity(entry, "group1")
 					.usingJobData("query", reports.get(entry).getContent()).usingJobData("hybris.user", hybris_user)
-					.usingJobData("hybris.password", hybris_pass).usingJobData("smtp.user", smtp_user)
-					.usingJobData("smtp.password", smtp_password).usingJobData("email.to", configs.get("email.test"))
+					.usingJobData("hybris.password", hybris_pass)
+					.usingJobData("smtp.user", smtp_user)
+					.usingJobData("smtp.password", smtp_password)
+					.usingJobData("email.to", configs.get("email.test"))
 					.usingJobData("email.cc", configs.get("email.test"))
+					.usingJobData("password.protected", reports.get(entry).isPassword_protected())
+					.usingJobData("password", reports.get(entry).getPassword())
 					.usingJobData("report.name", reports.get(entry).getName()).usingJobData("report.key", entry)
 					.usingJobData("temp.folder", configs.get("temp.folder"))
 					.usingJobData("hybris.env", configs.get("hybris.env"))
