@@ -69,6 +69,7 @@ import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 
 import ps.dao.SearchDAO;
+import ps.util.Tool;
 import ps.config.MapBean;
 import ps.config.HybrisJob;
 import ps.config.Job;
@@ -78,24 +79,35 @@ public class Main {
 	private static Map<Integer, Job> reports = new HashMap<Integer, Job>();
 	private static Map<String, String> configs = new HashMap<String, String>();
 	private static String dateFormat = "MM/dd/yyyy HH:mm:ss";
-	private static String headerBGColor = "#1D72D1";
-	private static String cellLightColor = "#cfdef7";
-	private static String cellDarkColor = "9dbdf2";
-	private static String successColor = "#bde8a9";
-	private static String runningColor = "#eff26a";
-	private static String failColor = "#e8a9b4";
+	private static String color_headerBG = "#1D72D1";
+	private static String color_cellLight = "#cfdef7";
+	private static String color_cellDark = "9dbdf2";
+	private static String color_statusSuccess = "#bde8a9";
+	private static String color_statusRunning = "#eff26a";
+	private static String color_statusFail = "#e8a9b4";
 
 	public static void main(String[] args) {
 
 		try {
-			readConfig();
-			getCloverJobStatus();
-			getHybrisJobStatus();
-			DateTime dt = new DateTime();
 
-			sendEmailByTWMSmtp(configs.get("smtp.user"), configs.get("email.to"), configs.get("email.cc"),
-					"Daily Job Monitor Report " + dt.getMonthOfYear() + "-" + dt.getDayOfMonth() + "-" + dt.getYear(),
-					null);
+			if (!Tool.isCompletedToday()) {
+
+				System.out.println("Starting Daily monitor report");
+				readConfig();
+				getCloverJobStatus();
+				getHybrisJobStatus();
+				DateTime dt = new DateTime();
+
+				sendEmailByTWMSmtp(configs.get("smtp.user"), configs.get("email.to"), configs.get("email.cc"),
+						"Daily Job Monitor Report " + dt.getMonthOfYear() + "-" + dt.getDayOfMonth() + "-"
+								+ dt.getYear(),
+						null);
+				Tool.AddControlFileforFulfillment();
+
+			} else {
+				System.out.println("Daily monitor report was done");
+
+			}
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -313,8 +325,6 @@ public class Main {
 			readByte = commandOutput.read();
 		}
 
-		
-
 		if (!outputBuffer.toString().trim().equalsIgnoreCase("0")) {
 			isStuck = true;
 		}
@@ -326,7 +336,7 @@ public class Main {
 
 	}
 
-	private static void getCloverJobStatus() throws FileNotFoundException {
+	private static void getCloverJobStatus() throws IOException, SAXException, ParserConfigurationException {
 
 		CloseableHttpClient httpclient = HttpClients.createDefault();
 		// CloseableHttpClient httpclient;
@@ -450,22 +460,22 @@ public class Main {
 			}
 		} catch (ClientProtocolException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			throw e;
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			throw e;
 		} catch (SAXException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			throw e;
 		} catch (ParserConfigurationException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			throw e;
 		} finally {
 			try {
 				httpclient.close();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				throw e;
 			}
 		}
 
@@ -572,14 +582,14 @@ public class Main {
 		htmlcontent.append(
 				"<table style = \"border-collapse: collapse; font-family: Arial, Verdana, sans-serif; font-size: 10pt;\">");
 
-		htmlcontent.append("<tr bgcolor=\"" + headerBGColor
+		htmlcontent.append("<tr bgcolor=\"" + color_headerBG
 				+ "\"  >     <th style = \"border: 1px solid white;color:white; \">No.</th>     <th style = \"border: 1px solid white;color:white;\">Job Type</th>     <th style = \"border: 1px solid white;color:white;\">Job name</th>  <th style = \"border: 1px solid white;color:white;\">Scheduled</th> <th style = \"border: 1px solid white;color:white;\">Start Time</th> <th style = \"border: 1px solid white;color:white;\">End Time</th>   <th style = \"border: 1px solid white;color:white;\">Duration</th> <th style = \"border: 1px solid white;color:white;\">Status</th>  </tr>");
 
 		for (Integer entry : reports.keySet()) {
 			if (entry % 2 == 0) {
-				htmlcontent.append("<tr bgcolor=\"" + cellLightColor + "\" >");
+				htmlcontent.append("<tr bgcolor=\"" + color_cellLight + "\" >");
 			} else {
-				htmlcontent.append("<tr bgcolor=\"" + cellDarkColor + "\" >");
+				htmlcontent.append("<tr bgcolor=\"" + color_cellDark + "\" >");
 			}
 			htmlcontent.append("<th style = \"border: 1px solid white;\">" + entry + "</th>");
 
@@ -645,19 +655,19 @@ public class Main {
 			}
 
 			if (reports.get(entry).getStatus() == null) {
-				htmlcontent.append("<th style = \"border: 1px solid white;color:#847d1a;\" bgcolor=\"" + runningColor
-						+ "\"> " + "NOT FOUND" + "</th>");
+				htmlcontent.append("<th style = \"border: 1px solid white;color:#847d1a;\" bgcolor=\""
+						+ color_statusRunning + "\"> " + "NOT FOUND" + "</th>");
 
 			} else {
 
 				if (reports.get(entry).getStatus().contains(new StringBuilder("FINISH"))) {
 					htmlcontent.append("<th style = \"border: 1px solid white;color:green;\"   bgcolor=\""
-							+ successColor + "\"> " + "SUCCESS" + "</th>");
+							+ color_statusSuccess + "\"> " + "SUCCESS" + "</th>");
 
 				} else {
 					if (reports.get(entry).getStatus().contains(new StringBuilder("RUNN"))) {
 						htmlcontent.append("<th style = \"border: 1px solid white;color:yellow;\" bgcolor=\""
-								+ runningColor + "\"> " + reports.get(entry).getStatus() + "</th>");
+								+ color_statusRunning + "\"> " + reports.get(entry).getStatus() + "</th>");
 
 					} else {
 						htmlcontent.append("<th style = \"border: 1px solid white;color:red;\"  > "
@@ -674,7 +684,7 @@ public class Main {
 			if (reports.get(entry).getSubjobs() != null) {
 				Map<Integer, Job> subjobs = reports.get(entry).getSubjobs();
 				for (Integer subindex : subjobs.keySet()) {
-					htmlcontent.append("<tr bgcolor=\"" + cellLightColor + "\">");
+					htmlcontent.append("<tr bgcolor=\"" + color_cellLight + "\">");
 
 					htmlcontent.append("<th style = \"border: 1px solid white;\">" + " " + "</th>");
 
@@ -744,22 +754,22 @@ public class Main {
 
 						if (subjobs.get(subindex).getStatus().contains(new StringBuilder("FINISH"))) {
 							htmlcontent.append("<th style = \"border: 1px solid white; color:green;\"   bgcolor=\""
-									+ successColor + "\"> " + "SUCCESS" + "</th>");
+									+ color_statusSuccess + "\"> " + "SUCCESS" + "</th>");
 						} else {
 							if (subjobs.get(subindex).getStatus().contains(new StringBuilder("RUNN"))) {
 								htmlcontent.append("<th style = \"border: 1px solid white;color:#847d1a;\" bgcolor=\""
-										+ runningColor + "\"> " + subjobs.get(subindex).getStatus() + "</th>");
+										+ color_statusRunning + "\"> " + subjobs.get(subindex).getStatus() + "</th>");
 
 							} else {
 								htmlcontent.append("<th style = \"border: 1px solid white;color:red;\" bgcolor=\""
-										+ failColor + "\"> " + subjobs.get(subindex).getStatus() + "</th>");
+										+ color_statusFail + "\"> " + subjobs.get(subindex).getStatus() + "</th>");
 							}
 						}
 						// htmlcontent.append("</tr >");
 					} else {
 
 						htmlcontent.append("<th style = \"border: 1px solid white;color:#847d1a;\" bgcolor=\""
-								+ runningColor + "\"> " + "NOT FOUND" + "</th>");
+								+ color_statusRunning + "\"> " + "NOT FOUND" + "</th>");
 
 						// htmlcontent.append("</tr >");
 					}
@@ -771,7 +781,7 @@ public class Main {
 
 		}
 
-		htmlcontent.append("<tr bgcolor=\"" + cellDarkColor + "\" >");
+		htmlcontent.append("<tr bgcolor=\"" + color_cellDark + "\" >");
 
 		htmlcontent.append("<th style = \"border: 1px solid white;\">" + "10" + "</th>");
 
@@ -789,13 +799,13 @@ public class Main {
 
 		if (isATSStuck()) {
 
-			htmlcontent.append("<th style = \"border: 1px solid white;color:red;\" bgcolor=\"" + failColor + "\"> "
-					+ "FAILURE" + "</th>");
+			htmlcontent.append("<th style = \"border: 1px solid white;color:red;\" bgcolor=\"" + color_statusFail
+					+ "\"> " + "FAILURE" + "</th>");
 
 		} else {
 
-			htmlcontent.append("<th style = \"border: 1px solid white;color:green;\" bgcolor=\"" + successColor + "\"> "
-					+ "SUCCESS" + "</th>");
+			htmlcontent.append("<th style = \"border: 1px solid white;color:green;\" bgcolor=\"" + color_statusSuccess
+					+ "\"> " + "SUCCESS" + "</th>");
 
 		}
 		htmlcontent.append("</tr >");
