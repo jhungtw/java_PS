@@ -130,7 +130,7 @@ public class ReportAutomation {
 					if (configs.get("exec.strategy").equalsIgnoreCase(ExecutionStrategy.FIXED_INTERVAL.toString())) {
 						System.out.println("Before adding interval: Time is " + now.getTime().toString());
 
-						now.add(Calendar.SECOND, (Integer.parseInt(configs.get("exec.interval")) * numberOfReport));
+						now.add(Calendar.SECOND, (Integer.parseInt(configs.get("exec.interval")) ));
 
 						System.out.println("Before generate Trigger: Time is " + now.getTime().toString());
 						trigger = (SimpleTrigger) newTrigger().withIdentity("trigger" + numberOfReport, "group1")
@@ -160,7 +160,7 @@ public class ReportAutomation {
 					System.out.println(reports.get(entry).getName() + " is enabled");
 					job = setJobDetail(entry, reports.get(entry));
 
-					now.add(Calendar.SECOND, (30 * numberOfReport));
+					now.add(Calendar.SECOND, 30);
 					SimpleTrigger trigger = (SimpleTrigger) newTrigger()
 							.withIdentity("trigger" + numberOfReport, "group1").startAt(now.getTime()).build();
 					sched.scheduleJob(job, trigger);
@@ -184,7 +184,9 @@ public class ReportAutomation {
 
 		accessLog.info("------- Started Scheduler -----------------");
 
-		accessLog.info("------- Waiting five minutes... ------------");
+		accessLog.info("------- Waiting "+(Integer.parseInt(configs.get("exec.interval"))* numberOfReport +300)/60+" minutes... ------------");
+		
+
 		try
 
 		{
@@ -197,7 +199,7 @@ public class ReportAutomation {
 						Math.abs(now.getTimeInMillis() - Calendar.getInstance().getTimeInMillis()) + 5L * 60L * 1000L);
 
 			} else {
-				Thread.sleep(3L * 60L * 1000L);
+				Thread.sleep((Integer.parseInt(configs.get("exec.interval"))* numberOfReport +300) * 60L * 1000L);
 			}
 
 			// executing...

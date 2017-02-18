@@ -1,4 +1,6 @@
 import org.apache.log4j.Logger;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
 import org.quartz.Job;
 import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
@@ -74,12 +76,32 @@ public class ReportJob implements Job {
 			String query = null;
 			switch (data.getString("report.frequency")) {
 			case "MONTH":
-				query = Tool.addQueryInterval(data.getString("query"), Tool.getFirstDayOfLastMonth("YYYY-MM-dd"),
-						Tool.getFirstDayOfThisMonth("YYYY-MM-dd"));
+				DateTime dt = new DateTime();
+				System.out.println("XXXXXX" + new DateTime(dt.getYear(), dt.getMonthOfYear(), 1, 0, 0, 0).minusMonths(1)
+						.toString(DateTimeFormat.forPattern("YYYY-MM-dd")));
+				System.out.println("XXXXXX" + new DateTime(dt.getYear(), dt.getMonthOfYear(), 1, 0, 0, 0)
+						.toString(DateTimeFormat.forPattern("YYYY-MM-dd")));
+
+				query = Tool.addQueryInterval(data.getString("query"),
+						new DateTime(dt.getYear(), dt.getMonthOfYear(), 1, 0, 0, 0).minusMonths(1)
+								.toString(DateTimeFormat.forPattern("YYYY-MM-dd")),
+						new DateTime(dt.getYear(), dt.getMonthOfYear(), 1, 0, 0, 0)
+								.toString(DateTimeFormat.forPattern("YYYY-MM-dd")));
 				break;
 			case "WEEK":
-				query = Tool.addQueryInterval(data.getString("query"), Tool.getFirstDayOfLastWeek("YYYY-MM-dd"),
-						Tool.getFirstDayOfThisWeek("YYYY-MM-dd"));
+				query = Tool.addQueryInterval(data.getString("query"),
+						new DateTime().minusDays(7).toString(DateTimeFormat.forPattern("YYYY-MM-dd")),
+						new DateTime().toString(DateTimeFormat.forPattern("YYYY-MM-dd")));
+				// need fix
+
+				/*
+				 * query = Tool.addQueryInterval(data.getString("query"),
+				 * Tool.getFirstDayOfLastWeek("YYYY-MM-dd"),
+				 * Tool.getFirstDayOfThisWeek("YYYY-MM-dd"));
+				 * 
+				 * 
+				 */
+
 				break;
 			default:
 
@@ -104,18 +126,25 @@ public class ReportJob implements Job {
 
 			String filepath = Tool.getOutputFilePath(data.getString("report.key"), data.getString("report.name"),
 					data.getString("temp.folder"));
+			if (data.getBooleanValue("password.protected")) {
+				Tool.saveResultsetToExcelWithPassword(data.getString("report.name"), rs, filepath,
+						data.getString("password"));
+				accessLog.info("Saved output as " + filepath);
 
-			Tool.saveResultsetToExcel(data.getString("report.name"), rs, filepath);
+			} else {
+				Tool.saveResultsetToExcel(data.getString("report.name"), rs, filepath);
+				accessLog.info("Saved output as " + filepath);
+			}
 
-			accessLog.info("Saved output as " + filepath);
 			// PII data?
 			// System.out.println(">>>>>>>>>>>>>>>>>" + filepath);
 			// System.out.println(">>>>>>>>>>>>>>>>>" +
 			// data.getBooleanValue("password.protected"));
 			// PII data
-			if (data.getBooleanValue("password.protected")) {
-				filepath = Tool.packLocal(filepath, data.getString("password"));
-			}
+			// if (data.getBooleanValue("password.protected")) {
+			// filepath = Tool.packLocal(filepath, data.getString("password"));
+
+			// }
 
 			// System.out.println(">>>>>>>>>>>>>>>>>" + filepath);
 

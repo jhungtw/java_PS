@@ -8,10 +8,12 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.SocketException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.GeneralSecurityException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.DateFormat;
@@ -44,9 +46,16 @@ import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPReply;
 import org.apache.log4j.Logger;
+import org.apache.poi.poifs.crypt.CipherAlgorithm;
+import org.apache.poi.poifs.crypt.EncryptionInfo;
+import org.apache.poi.poifs.crypt.EncryptionMode;
+import org.apache.poi.poifs.crypt.Encryptor;
+import org.apache.poi.poifs.crypt.HashAlgorithm;
+import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.joda.time.DateTime;
 import org.yaml.snakeyaml.Yaml;
 
 import basic.config.DoneStatus;
@@ -81,10 +90,21 @@ public class Tool {
 		zipFile.addFile(new File(filePath), zipParameters);
 		return destinationZipFilePath;
 	}
+	
+
+	
+
+	public static String getWeekDayName(int index) {
+
+		String[] dayNames = new String[] { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
+				"Sunday" };
+		return dayNames[index - 1];
+
+	}
 
 	public static Map<String, Report> disableIrrelevantReports(Map<String, Report> reports) {
 
-		Calendar today = Calendar.getInstance();
+		DateTime dt = new DateTime();
 
 		// test monday as 1 st day of month
 		// today.set(2017, 4, 1);
@@ -93,6 +113,41 @@ public class Tool {
 		// test 1 st day of month
 		// today.set(2017, 0, 11);
 
+		// 1.when enabled: true
+		for (String entry : reports.keySet()) {
+			
+		//	System.out.println("-->"+reports.get(entry).getTrigger_day()+reports.get(entry).isEnabled()+getWeekDayName(dt.getDayOfWeek()));
+			
+			if (reports.get(entry).isEnabled()) {
+				// System.out.println(" enabled!!!");
+				// 2.1 when frequency: WEEK
+				if (reports.get(entry).getFrequency().equalsIgnoreCase(ReportFrequency.WEEK.toString())) {
+					// 2.1.1 when trigger_day not matched
+					if (!reports.get(entry).getTrigger_day().equalsIgnoreCase(getWeekDayName(dt.getDayOfWeek()))) {
+						// System.out.println(" set false!!!");
+						reports.get(entry).setEnabled(false);
+
+					}
+				}
+
+				// 2.2 when frequency: MONTH
+				if (reports.get(entry).getFrequency().equalsIgnoreCase(ReportFrequency.MONTH.toString())) {
+					// 2.2.1 when trigger_day not matched
+
+					if (!reports.get(entry).getTrigger_day().equalsIgnoreCase(Integer.toString(dt.getDayOfMonth()))) {
+						reports.get(entry).setEnabled(false);
+
+					}
+
+				}
+			}
+		
+			
+		
+		}
+		System.out.println("reports is : " + reports.toString());
+
+/*
 		today.setFirstDayOfWeek(Calendar.MONDAY);
 
 		System.out.println("today: " + today.getTime().toString());
@@ -125,6 +180,7 @@ public class Tool {
 			}
 		}
 		System.out.println("reports is : " + reports.toString());
+	*/
 		return reports;
 
 	}
@@ -234,8 +290,9 @@ public class Tool {
 		return sb.toString();
 	}
 
-	public static void saveResultsetToExcel(String reportname, ResultSet rs, String filepath)
-			throws SQLException, IOException {
+	
+	public static void saveResultsetToExcelWithPassword(String reportname, ResultSet rs, String filepath,String password)
+			throws SQLException, IOException, GeneralSecurityException {
 		// ***********************************************************
 		// implement save file
 		// ***********************************************************
@@ -283,10 +340,96 @@ public class Tool {
 			index++;
 		}
 
+		// dsiable by test
+		//FileOutputStream out = new FileOutputStream(new File(filepath));
+		
+		//prepare password
+		EncryptionInfo info = new EncryptionInfo(EncryptionMode.agile,
+		CipherAlgorithm.aes192, HashAlgorithm.sha384, -1, -1, null);
+
+		Encryptor enc = info.getEncryptor();
+		enc.confirmPassword(password);
+		
+		
+		// Encrypt
+		// OutputStream out = enc.getDataStream(new POIFSFileSystem());
+		POIFSFileSystem fs = new POIFSFileSystem();
+		OutputStream out = enc.getDataStream(fs);
+
+		wb.write(out);
+		//out.close();
+		//wb.close();
+		
+		// Save
+		FileOutputStream fos = new FileOutputStream(filepath);
+		fs.writeFilesystem(fos);
+		fos.close(); 
+		wb.close();
+		
+		
+
+	}
+	public static void saveResultsetToExcel(String reportname, ResultSet rs, String filepath)
+			throws SQLException, IOException, GeneralSecurityException {
+		// ***********************************************************
+		// implement save file
+		// ***********************************************************
+
+		ArrayList<String> headers = new ArrayList<String>();
+		ArrayList<ArrayList<String>> rows = new ArrayList<ArrayList<String>>();
+
+		headers = getHeadersFromResultset(rs);
+		// accessLog.info("headers" + headers.size());
+		rows = getRowsFromResultset(rs);
+		// accessLog.info("rows" + rows.size());
+
+		// String filepath = null;
+
+		XSSFWorkbook wb = new XSSFWorkbook();
+		XSSFSheet sheet = wb.createSheet(reportname);
+		XSSFRow row = sheet.createRow(0);
+
+		int numberOfColumns = headers.size();
+
+		for (int i = 0; i < numberOfColumns; i++) {
+
+			System.out.println("dddd" + headers.get(i) + "pppp");
+			row.createCell(i).setCellValue(headers.get(i));
+		}
+
+		int index = 1;
+		int j = 0;
+
+		for (ArrayList<String> tmp : rows) {
+
+			row = sheet.createRow(index);
+
+			for (String cell : tmp) {
+				if (cell == null) {
+					cell = "//NULL";
+				}
+				System.out.println("YYYYY" + cell.toString());
+				// String callstring = new String(cell.toString());
+				row.createCell(j).setCellValue(cell.toString());
+				j++;
+			}
+			j = 0;
+
+			index++;
+		}
+
+	
 		FileOutputStream out = new FileOutputStream(new File(filepath));
+		
+		
+
 		wb.write(out);
 		out.close();
 		wb.close();
+		
+
+		
+		
 
 	}
 
@@ -527,7 +670,7 @@ public class Tool {
 	public static void sendEmailByTWMSmtp(String emailuser, String emailto, String emailcc, String reportname,
 			String filepath) {
 		try {
-			
+
 			Properties props = System.getProperties();
 
 			props.put("mail.smtp.host", "smtp.totalwine.com");
@@ -545,14 +688,15 @@ public class Tool {
 
 			// Set Subject: header field
 			Calendar now = Calendar.getInstance();
-			message.setSubject(reportname + " on " + (now.get(Calendar.MONTH) + 1) + "-" + now.get(Calendar.DATE));
+			message.setSubject("[REPORT] "+reportname + " on " + (now.get(Calendar.MONTH) + 1) + "-" + now.get(Calendar.DATE));
 
 			// Create the message part
 			BodyPart messageBodyPart = new MimeBodyPart();
 
 			// Now set the actual message
-		
-			messageBodyPart.setContent("<h3>Please check the attached for report " + reportname + "</h3><br>", "text/html");
+
+			messageBodyPart.setContent("<h3>Please check the attached for report " + reportname + "</h3><br>",
+					"text/html");
 
 			// Create a multipar message
 			Multipart multipart = new MimeMultipart();
@@ -562,11 +706,7 @@ public class Tool {
 
 			// Part two is attachment
 			messageBodyPart = new MimeBodyPart();
-			
-			
-			
-			
-			
+
 			DataSource source = new FileDataSource(filepath);
 			messageBodyPart.setDataHandler(new DataHandler(source));
 			messageBodyPart.setFileName(new File(filepath).getName());

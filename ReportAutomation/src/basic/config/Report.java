@@ -5,6 +5,13 @@ public class Report {
 	private String name;
 	private boolean enabled;
 	private String frequency;
+	private String trigger_day;
+	public String getTrigger_day() {
+		return trigger_day;
+	}
+	public void setTrigger_day(String trigger_day) {
+		this.trigger_day = trigger_day;
+	}
 	private String content;
 	private boolean password_protected; 
 	private String password;
@@ -74,10 +81,11 @@ public class Report {
 	@Override
 	public String toString() {
 		return "Report [type=" + type + ", name=" + name + ", enabled=" + enabled + ", frequency=" + frequency
-				+ ", content=" + content + ", email_to=" + email_to + ", email_cc=" + email_cc + ", schedule="
+				+ ", trigger_day=" + trigger_day + ", content=" + content + ", password_protected=" + password_protected
+				+ ", password=" + password + ", email_to=" + email_to + ", email_cc=" + email_cc + ", schedule="
 				+ schedule + "]";
 	}
-	
+
 	
 	
 }
