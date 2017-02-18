@@ -29,8 +29,10 @@ import javax.activation.FileDataSource;
 import javax.mail.Session;
 import javax.mail.BodyPart;
 import javax.mail.Message;
+import javax.mail.MessagingException;
 import javax.mail.Multipart;
 import javax.mail.Transport;
+import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
@@ -51,6 +53,10 @@ import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
+import org.apache.log4j.RollingFileAppender;
 import org.joda.time.DateTime;
 import org.joda.time.LocalTime;
 import org.joda.time.Period;
@@ -73,11 +79,13 @@ import ps.util.Tool;
 import ps.config.MapBean;
 import ps.config.HybrisJob;
 import ps.config.Job;
+import ps.config.JobExeStatus;
 
 public class Main {
-
+	private static Logger accessLog;
 	private static Map<Integer, Job> reports = new HashMap<Integer, Job>();
 	private static Map<String, String> configs = new HashMap<String, String>();
+	private static boolean isATSGetStuck;
 	private static String dateFormat = "MM/dd/yyyy HH:mm:ss";
 	private static String color_headerBG = "#1D72D1";
 	private static String color_cellLight = "#cfdef7";
@@ -89,35 +97,75 @@ public class Main {
 	public static void main(String[] args) {
 
 		try {
+			readConfig();
+			
+			initLogger();
+			
+			accessLog = Logger.getLogger("DailyMonitorLog");
+			accessLog.setLevel(Level.INFO);
+			accessLog.info("Read Config is done");
+			
+			
 
 			if (!Tool.isCompletedToday()) {
 
 				System.out.println("Starting Daily monitor report");
-				readConfig();
+				accessLog.info("Starting Daily monitor report");
+                
+				isATSGetStuck = isATSStuck();
+				accessLog.info("Get ATS stuck status is done");
+				
 				getCloverJobStatus();
+				accessLog.info("Get clover jobs's status is done");
 				getHybrisJobStatus();
+				accessLog.info("Get Hybris jobs's status is done");
 				DateTime dt = new DateTime();
 
-				sendEmailByTWMSmtp(configs.get("smtp.user"), configs.get("email.to"), configs.get("email.cc"),
-						"Daily Job Monitor Report " + dt.getMonthOfYear() + "-" + dt.getDayOfMonth() + "-"
+				sendEmailByTWMSmtp(configs.get("smtp.user"), configs.get("email.to"), configs.get("email.cc"),configs.get("email.to.success"),configs.get("email.cc.success")
+						,"Daily Job Monitor Report " + dt.getMonthOfYear() + "-" + dt.getDayOfMonth() + "-"
 								+ dt.getYear(),
 						null);
+				accessLog.info("Send email is done");
 				Tool.AddControlFileforFulfillment();
+				accessLog.info("Add control file is done");
 
 			} else {
+				accessLog.info("Daily monitor report was done");
 				System.out.println("Daily monitor report was done");
 
 			}
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
+			accessLog.info("Exception detail: ", e);
 			e.printStackTrace();
+
 		}
+
+	}
+
+	public static void initLogger() throws IOException {
+		System.out.println("11111");
+		String filePath = configs.get("log.path").toString().trim();
+		System.out.println(filePath);
+		PatternLayout layout = new PatternLayout("%-5p %d %m%n");
+		RollingFileAppender appender = new RollingFileAppender(layout, filePath);
+
+		// ConsoleAppender cappender = new ConsoleAppender();
+
+		appender.setName("DailyMonitorLog");
+		appender.setMaxFileSize("1MB");
+		appender.activateOptions();
+		Logger.getRootLogger().addAppender(appender);
+		Logger.getRootLogger().setLevel(Level.INFO);
+		System.out.println("2222");
+
+		// Logger.getRootLogger().addAppender(cappender);
 
 	}
 
 	private static void readConfig() throws FileNotFoundException {
 
-		FileReader reader = new FileReader(new File("c:\\tmp\\dailymonitor11.properties"));
+		FileReader reader = new FileReader(new File("c:\\tmp\\dailymonitor22.properties"));
 		Yaml yaml = new Yaml();
 		MapBean parsed = yaml.loadAs(reader, MapBean.class);
 
@@ -340,7 +388,7 @@ public class Main {
 
 		CloseableHttpClient httpclient = HttpClients.createDefault();
 		// CloseableHttpClient httpclient;
-		try {
+		
 
 			CredentialsProvider credsProvider = new BasicCredentialsProvider();
 			credsProvider.setCredentials(new AuthScope("104.130.35.109", 8080),
@@ -458,26 +506,9 @@ public class Main {
 
 				}
 			}
-		} catch (ClientProtocolException e) {
-			// TODO Auto-generated catch block
-			throw e;
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			throw e;
-		} catch (SAXException e) {
-			// TODO Auto-generated catch block
-			throw e;
-		} catch (ParserConfigurationException e) {
-			// TODO Auto-generated catch block
-			throw e;
-		} finally {
-			try {
+		
 				httpclient.close();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				throw e;
-			}
-		}
+			
 
 	}
 
@@ -490,9 +521,9 @@ public class Main {
 
 	}
 
-	public static void sendEmailByTWMSmtp(String emailuser, String emailto, String emailcc, String reportname,
-			String filepath) {
-		try {
+	public static void sendEmailByTWMSmtp(String emailuser, String emailto, String emailcc,String emailtosuccess, String emailccsuccess , String reportname,
+			String filepath) throws AddressException, MessagingException, IOException, JSchException {
+		
 
 			// use twm
 			// Properties props = System.getProperties();
@@ -511,17 +542,17 @@ public class Main {
 			Session session = Session.getInstance(props, null);
 			Message message = new MimeMessage(session);
 			// Set From: header field of the header.
-			message.setFrom(new InternetAddress("jhung@totalwine.com"));
+			message.setFrom(new InternetAddress("DOTProductionSupportTeam@totalwine.com"));
 
 			// Set To: header field of the header.
-			message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(emailto));
-			if (emailcc != null) {
-				message.setRecipients(Message.RecipientType.CC, InternetAddress.parse(emailcc));
-			}
+			// message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(emailto));
+			//if (emailcc != null) {
+			//	message.setRecipients(Message.RecipientType.CC, InternetAddress.parse(emailcc));
+			//}
 
 			// Set Subject: header field
 			// Calendar now = Calendar.getInstance();
-			message.setSubject(reportname);
+			//message.setSubject(reportname+": COMPLETE -- No CloverETL/Hybris job issue [EOM]");
 
 			// Create the message part
 			BodyPart messageBodyPart = new MimeBodyPart();
@@ -532,6 +563,26 @@ public class Main {
 			// report " + reportname + "</h3><br>", "text/html");
 
 			messageBodyPart.setContent(getEmailContent(), "text/html");
+			
+			//Check all job is done?
+			// Set To: header field of the header.
+			if (Tool.isAllJobDoneSuccessfully(reports,isATSGetStuck)){
+				message.setSubject(reportname+": COMPLETE -- No CloverETL/Hybris job issue [EOM]");
+				message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(emailtosuccess));
+				if (emailccsuccess != null) {
+					message.setRecipients(Message.RecipientType.CC, InternetAddress.parse(emailccsuccess));
+				}
+
+			}
+			else
+			{
+				message.setSubject(reportname);
+				message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(emailto));
+				if (emailcc != null) {
+					message.setRecipients(Message.RecipientType.CC, InternetAddress.parse(emailcc));
+				}
+
+			}
 
 			// Create a multipar message
 			Multipart multipart = new MimeMultipart();
@@ -570,9 +621,7 @@ public class Main {
 			// use gmail
 
 			System.out.println("EMail Sent Successfully!!");
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+
 	}
 
 	public static String getEmailContent() throws JSchException, IOException {
@@ -657,21 +706,26 @@ public class Main {
 			if (reports.get(entry).getStatus() == null) {
 				htmlcontent.append("<th style = \"border: 1px solid white;color:#847d1a;\" bgcolor=\""
 						+ color_statusRunning + "\"> " + "NOT FOUND" + "</th>");
+				reports.get(entry).setStatus("NOT FOUND");
 
 			} else {
 
 				if (reports.get(entry).getStatus().contains(new StringBuilder("FINISH"))) {
 					htmlcontent.append("<th style = \"border: 1px solid white;color:green;\"   bgcolor=\""
 							+ color_statusSuccess + "\"> " + "SUCCESS" + "</th>");
+					reports.get(entry).setStatus("SUCCESS");
 
 				} else {
 					if (reports.get(entry).getStatus().contains(new StringBuilder("RUNN"))) {
-						htmlcontent.append("<th style = \"border: 1px solid white;color:yellow;\" bgcolor=\""
+						htmlcontent.append("<th style = \"border: 1px solid white;color:#847d1a;\" bgcolor=\""
 								+ color_statusRunning + "\"> " + reports.get(entry).getStatus() + "</th>");
+						reports.get(entry).setStatus("RUNNING");
 
 					} else {
 						htmlcontent.append("<th style = \"border: 1px solid white;color:red;\"  > "
 								+ reports.get(entry).getStatus() + "</th>");
+						reports.get(entry).setStatus("FAILURE");
+						
 					}
 				}
 
@@ -755,14 +809,17 @@ public class Main {
 						if (subjobs.get(subindex).getStatus().contains(new StringBuilder("FINISH"))) {
 							htmlcontent.append("<th style = \"border: 1px solid white; color:green;\"   bgcolor=\""
 									+ color_statusSuccess + "\"> " + "SUCCESS" + "</th>");
+							subjobs.get(subindex).setStatus("SUCCESS");
 						} else {
 							if (subjobs.get(subindex).getStatus().contains(new StringBuilder("RUNN"))) {
 								htmlcontent.append("<th style = \"border: 1px solid white;color:#847d1a;\" bgcolor=\""
 										+ color_statusRunning + "\"> " + subjobs.get(subindex).getStatus() + "</th>");
+								subjobs.get(subindex).setStatus("RUNNING");
 
 							} else {
 								htmlcontent.append("<th style = \"border: 1px solid white;color:red;\" bgcolor=\""
 										+ color_statusFail + "\"> " + subjobs.get(subindex).getStatus() + "</th>");
+								subjobs.get(subindex).setStatus("FAILURE");
 							}
 						}
 						// htmlcontent.append("</tr >");
@@ -770,6 +827,7 @@ public class Main {
 
 						htmlcontent.append("<th style = \"border: 1px solid white;color:#847d1a;\" bgcolor=\""
 								+ color_statusRunning + "\"> " + "NOT FOUND" + "</th>");
+						subjobs.get(subindex).setStatus("NOT FOUND");
 
 						// htmlcontent.append("</tr >");
 					}
@@ -797,7 +855,7 @@ public class Main {
 
 		htmlcontent.append("<th style = \"border: 1px solid white;\">" + "" + "</th>");
 
-		if (isATSStuck()) {
+		if (isATSGetStuck) {
 
 			htmlcontent.append("<th style = \"border: 1px solid white;color:red;\" bgcolor=\"" + color_statusFail
 					+ "\"> " + "FAILURE" + "</th>");
