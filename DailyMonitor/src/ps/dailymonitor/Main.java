@@ -98,32 +98,30 @@ public class Main {
 
 		try {
 			readConfig();
-			
+
 			initLogger();
-			
+
 			accessLog = Logger.getLogger("DailyMonitorLog");
 			accessLog.setLevel(Level.INFO);
 			accessLog.info("Read Config is done");
-			
-			
 
 			if (!Tool.isCompletedToday()) {
 
 				System.out.println("Starting Daily monitor report");
 				accessLog.info("Starting Daily monitor report");
-                
+
 				isATSGetStuck = isATSStuck();
 				accessLog.info("Get ATS stuck status is done");
-				
+
 				getCloverJobStatus();
 				accessLog.info("Get clover jobs's status is done");
 				getHybrisJobStatus();
 				accessLog.info("Get Hybris jobs's status is done");
 				DateTime dt = new DateTime();
 
-				sendEmailByTWMSmtp(configs.get("smtp.user"), configs.get("email.to"), configs.get("email.cc"),configs.get("email.to.success"),configs.get("email.cc.success")
-						,"Daily Job Monitor Report " + dt.getMonthOfYear() + "-" + dt.getDayOfMonth() + "-"
-								+ dt.getYear(),
+				sendEmailByTWMSmtp(configs.get("smtp.user"), configs.get("email.to"), configs.get("email.cc"),
+						configs.get("email.to.success"), configs.get("email.cc.success"), "Daily Job Monitor Report "
+								+ dt.getMonthOfYear() + "-" + dt.getDayOfMonth() + "-" + dt.getYear(),
 						null);
 				accessLog.info("Send email is done");
 				Tool.AddControlFileforFulfillment();
@@ -165,7 +163,7 @@ public class Main {
 
 	private static void readConfig() throws FileNotFoundException {
 
-		FileReader reader = new FileReader(new File("c:\\tmp\\dailymonitor22.properties"));
+		FileReader reader = new FileReader(new File("c:\\tmp\\dailymonitor33.properties"));
 		Yaml yaml = new Yaml();
 		MapBean parsed = yaml.loadAs(reader, MapBean.class);
 
@@ -187,8 +185,9 @@ public class Main {
 			throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException {
 		String HYBRIS_DRIVER_CLASS = "de.hybris.vjdbc.VirtualDriver";
 
-		String HYBRIS_DRIVER_URL = "jdbc:hybris:flexiblesearch:http://backoffice.totalwine.com/virtualjdbc/service";
-
+		// String HYBRIS_DRIVER_URL =
+		// "jdbc:hybris:flexiblesearch:http://backoffice.totalwine.com/virtualjdbc/service";
+		String HYBRIS_DRIVER_URL = "jdbc:hybris:flexiblesearch:http://172.24.40.119:9001/virtualjdbc/service";
 		DateTime now = new DateTime();
 		DateTime dt;
 		dt = new DateTime(now.getYear(), now.getMonthOfYear(), now.getDayOfMonth(), 0, 0, 0, 0);
@@ -388,127 +387,128 @@ public class Main {
 
 		CloseableHttpClient httpclient = HttpClients.createDefault();
 		// CloseableHttpClient httpclient;
-		
 
-			CredentialsProvider credsProvider = new BasicCredentialsProvider();
-			credsProvider.setCredentials(new AuthScope("104.130.35.109", 8080),
-					new UsernamePasswordCredentials("jhung", "totalwine"));
-			httpclient = HttpClients.custom().setDefaultCredentialsProvider(credsProvider).build();
+		CredentialsProvider credsProvider = new BasicCredentialsProvider();
+		credsProvider.setCredentials(new AuthScope("104.130.35.109", 8080),
+				new UsernamePasswordCredentials("jhung", "totalwine"));
+		httpclient = HttpClients.custom().setDefaultCredentialsProvider(credsProvider).build();
 
-			ResponseHandler<String> responseHandler = new ResponseHandler<String>() {
+		ResponseHandler<String> responseHandler = new ResponseHandler<String>() {
 
-				@Override
-				public String handleResponse(final HttpResponse response) throws ClientProtocolException, IOException {
+			@Override
+			public String handleResponse(final HttpResponse response) throws ClientProtocolException, IOException {
 
-					int status = response.getStatusLine().getStatusCode();
-					HttpEntity entity = response.getEntity();
-					return entity != null ? EntityUtils.toString(entity) : null;
-					/*
-					 * if (status >= 200 && status < 300) { HttpEntity entity =
-					 * response.getEntity(); return entity != null ?
-					 * EntityUtils.toString(entity) : null; } else {
-					 * 
-					 * throw new
-					 * ClientProtocolException("Unexpected response status: " +
-					 * status); }
-					 */
-				}
-			};
-
-			for (Integer entry : reports.keySet()) {
-				if (reports.get(entry).getType().equalsIgnoreCase("Clover")) {
-					StringBuilder httpsb = new StringBuilder();
-					// calculate trigger time
-					DateTime now = new DateTime();
-					DateTimeFormatter fmt = DateTimeFormat.forPattern("HH:mm");
-					LocalTime localTime = fmt.parseLocalTime(reports.get(entry).getScheduled());
-					DateTime dt;
-
-					System.out.println(
-							"is today ? :" + reports.get(entry).isToday() + "/// today is " + now.getDayOfMonth());
-
-					if (reports.get(entry).isToday()) {
-						dt = new DateTime(now.getYear(), now.getMonthOfYear(), now.getDayOfMonth(),
-								localTime.getHourOfDay(), localTime.getMinuteOfHour(), 0, 0);
-					} else {
-						dt = new DateTime(now.getYear(), now.getMonthOfYear(), now.getDayOfMonth() - 1,
-								localTime.getHourOfDay(), localTime.getMinuteOfHour(), 0, 0);
-					}
-
-					System.out.println(
-							"sechedule time is " + dt.toString(DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss")));
-
-					String fromString = URLEncoder.encode(dt.toString(DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss")),
-							"UTF-8");
-
-					httpsb.append("http://104.130.35.109:8080/clover/request_processor/executions_history?")
-							.append(reports.get(entry).getName() + "&")
-							// .append("from=2017-02-02%2000%3A00%3A00&&")
-							.append("from=" + fromString + "&").append("records=1&")
-							.append("returnType=DESCRIPTION_XML");
-					System.out.println("Key : " + entry + " Value : " + reports.get(entry).toString());
-					HttpGet httpget = new HttpGet(httpsb.toString());
-					System.out.println("Executing request " + httpget.getRequestLine());
-					String responseBody = httpclient.execute(httpget, responseHandler);
-					DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-					// Using factory get an instance of document builder
-					DocumentBuilder db = dbf.newDocumentBuilder();
-
-					// parse using builder to get DOM representation of the XML
-					// file
-
-					InputStream stream = new ByteArrayInputStream(responseBody.getBytes(StandardCharsets.UTF_8));
-					Document dom = db.parse(stream);
-
-					if (dom.getElementsByTagName("cs:execution").getLength() == 1) {
-
-						reports.get(entry).setStatus(dom.getElementsByTagName("cs:status").item(0).getTextContent());
-
-						DateTime tmpdate;
-
-						tmpdate = DateTime.parse(
-								dom.getElementsByTagName("cs:startTime").item(0).getTextContent().substring(0, 19),
-								DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss"));
-						// fix date format
-						/*
-						 * reports.get(entry)
-						 * .setStartTime(tmpdate.toString(DateTimeFormat.
-						 * forPattern("yyyy-MM-dd HH:mm:ss.s")));
-						 */
-						reports.get(entry).setStartTime(tmpdate.toString(DateTimeFormat.forPattern(dateFormat)));
-
-						// reports.get(entry).setStartTime(dom.getElementsByTagName("cs:startTime").item(0).getTextContent());
-						// reports.get(entry).setEndTime(dom.getElementsByTagName("cs:stopTime").item(0).getTextContent());
-						tmpdate = DateTime.parse(
-								dom.getElementsByTagName("cs:stopTime").item(0).getTextContent().substring(0, 19),
-								DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss"));
-
-						// fix date format
-						/*
-						 * reports.get(entry)
-						 * .setEndTime(tmpdate.toString(DateTimeFormat.
-						 * forPattern("yyyy-MM-dd HH:mm:ss.s")));
-						 */
-
-						reports.get(entry).setEndTime(tmpdate.toString(DateTimeFormat.forPattern(dateFormat)));
-
-						reports.get(entry)
-								.setDuration(dom.getElementsByTagName("cs:durationString").item(0).getTextContent());
-
-						System.out.println("----------------------------------------");
-						System.out.println("->>>>>>>>  " + reports.get(entry).toString());
-
-						System.out.println("----------------------------------------");
-					} else {
-						reports.get(entry).setStatus("NO EXECUTION");
-
-					}
-
-				}
+				int status = response.getStatusLine().getStatusCode();
+				HttpEntity entity = response.getEntity();
+				return entity != null ? EntityUtils.toString(entity) : null;
+				/*
+				 * if (status >= 200 && status < 300) { HttpEntity entity =
+				 * response.getEntity(); return entity != null ?
+				 * EntityUtils.toString(entity) : null; } else {
+				 * 
+				 * throw new
+				 * ClientProtocolException("Unexpected response status: " +
+				 * status); }
+				 */
 			}
-		
-				httpclient.close();
-			
+		};
+
+		for (Integer entry : reports.keySet()) {
+			// only handle clover job
+			if (reports.get(entry).getType().equalsIgnoreCase("Clover")) {
+				StringBuilder httpsb = new StringBuilder();
+				// calculate trigger time
+				DateTime now = new DateTime();
+				DateTimeFormatter fmt = DateTimeFormat.forPattern("HH:mm");
+				LocalTime localTime = fmt.parseLocalTime(reports.get(entry).getScheduled());
+				DateTime dt;
+
+				System.out
+						.println("is today ? :" + reports.get(entry).isToday() + "/// today is " + now.getDayOfMonth());
+				// last night job or today's job
+				if (reports.get(entry).isToday()) {
+					dt = new DateTime(now.getYear(), now.getMonthOfYear(), now.getDayOfMonth(),
+							localTime.getHourOfDay(), localTime.getMinuteOfHour(), 0, 0);
+				} else {
+					now= now.minusDays(1);
+					dt = new DateTime(now.getYear(), now.getMonthOfYear(), now.getDayOfMonth(),
+							localTime.getHourOfDay(), localTime.getMinuteOfHour(), 0, 0);
+				}
+
+				System.out
+						.println("sechedule time is " + dt.toString(DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss")));
+
+				String fromString = URLEncoder.encode(dt.toString(DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss")),
+						"UTF-8");
+
+				httpsb.append("http://104.130.35.109:8080/clover/request_processor/executions_history?sandbox=")
+						.append(reports.get(entry).getName() + "&")
+						// .append("from=2017-02-02%2000%3A00%3A00&&")
+						.append("from=" + fromString + "&").append("records=1&").append("returnType=DESCRIPTION_XML");
+				System.out.println("Key : " + entry + " Value : " + reports.get(entry).toString());
+				HttpGet httpget = new HttpGet(httpsb.toString());
+				System.out.println("Executing request " + httpget.getRequestLine());
+				accessLog.info("Executing request for clover job status : " + httpget.getRequestLine());
+				String responseBody = httpclient.execute(httpget, responseHandler);
+				DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+				// Using factory get an instance of document builder
+				DocumentBuilder db = dbf.newDocumentBuilder();
+
+				// parse using builder to get DOM representation of the XML
+				// file
+
+				InputStream stream = new ByteArrayInputStream(responseBody.getBytes(StandardCharsets.UTF_8));
+				Document dom = db.parse(stream);
+
+				if (dom.getElementsByTagName("cs:execution").getLength() == 1) {
+
+					reports.get(entry).setStatus(dom.getElementsByTagName("cs:status").item(0).getTextContent());
+
+					DateTime tmpdate;
+
+					tmpdate = DateTime.parse(
+							dom.getElementsByTagName("cs:startTime").item(0).getTextContent().substring(0, 19),
+							DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss"));
+					// fix date format
+					/*
+					 * reports.get(entry)
+					 * .setStartTime(tmpdate.toString(DateTimeFormat.
+					 * forPattern("yyyy-MM-dd HH:mm:ss.s")));
+					 */
+					reports.get(entry).setStartTime(tmpdate.toString(DateTimeFormat.forPattern(dateFormat)));
+
+					// reports.get(entry).setStartTime(dom.getElementsByTagName("cs:startTime").item(0).getTextContent());
+					// reports.get(entry).setEndTime(dom.getElementsByTagName("cs:stopTime").item(0).getTextContent());
+					tmpdate = DateTime.parse(
+							dom.getElementsByTagName("cs:stopTime").item(0).getTextContent().substring(0, 19),
+							DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss"));
+
+					// fix date format
+					/*
+					 * reports.get(entry)
+					 * .setEndTime(tmpdate.toString(DateTimeFormat.
+					 * forPattern("yyyy-MM-dd HH:mm:ss.s")));
+					 */
+
+					reports.get(entry).setEndTime(tmpdate.toString(DateTimeFormat.forPattern(dateFormat)));
+
+					reports.get(entry)
+							.setDuration(dom.getElementsByTagName("cs:durationString").item(0).getTextContent());
+
+					System.out.println("----------------------------------------");
+					System.out.println("->>>>>>>>  " + reports.get(entry).toString());
+					accessLog.info("==> "+reports.get(entry).toString());
+
+					System.out.println("----------------------------------------");
+				} else {
+					reports.get(entry).setStatus("NO EXECUTION");
+
+				}
+
+			}
+		}
+
+		httpclient.close();
 
 	}
 
@@ -521,106 +521,107 @@ public class Main {
 
 	}
 
-	public static void sendEmailByTWMSmtp(String emailuser, String emailto, String emailcc,String emailtosuccess, String emailccsuccess , String reportname,
-			String filepath) throws AddressException, MessagingException, IOException, JSchException {
-		
+	public static void sendEmailByTWMSmtp(String emailuser, String emailto, String emailcc, String emailtosuccess,
+			String emailccsuccess, String reportname, String filepath)
+			throws AddressException, MessagingException, IOException, JSchException {
 
-			// use twm
-			// Properties props = System.getProperties();
+		// use twm
+		// Properties props = System.getProperties();
 
-			// props.put("mail.smtp.host", "smtp.totalwine.com");
+		// props.put("mail.smtp.host", "smtp.totalwine.com");
 
-			// use gmail
+		// use gmail
 
-			Properties props = System.getProperties();
-			props.put("mail.smtp.port", "587");
-			props.put("mail.smtp.auth", "true");
-			props.put("mail.smtp.starttls.enable", "true");
+		Properties props = System.getProperties();
+		props.put("mail.smtp.port", "587");
+		props.put("mail.smtp.auth", "true");
+		props.put("mail.smtp.starttls.enable", "true");
 
-			// use gmail
+		// use gmail
 
-			Session session = Session.getInstance(props, null);
-			Message message = new MimeMessage(session);
-			// Set From: header field of the header.
-			message.setFrom(new InternetAddress("DOTProductionSupportTeam@totalwine.com"));
+		Session session = Session.getInstance(props, null);
+		Message message = new MimeMessage(session);
+		// Set From: header field of the header.
+		message.setFrom(new InternetAddress("DOTProductionSupportTeam@totalwine.com"));
 
-			// Set To: header field of the header.
-			// message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(emailto));
-			//if (emailcc != null) {
-			//	message.setRecipients(Message.RecipientType.CC, InternetAddress.parse(emailcc));
-			//}
+		// Set To: header field of the header.
+		// message.setRecipients(Message.RecipientType.TO,
+		// InternetAddress.parse(emailto));
+		// if (emailcc != null) {
+		// message.setRecipients(Message.RecipientType.CC,
+		// InternetAddress.parse(emailcc));
+		// }
 
-			// Set Subject: header field
-			// Calendar now = Calendar.getInstance();
-			//message.setSubject(reportname+": COMPLETE -- No CloverETL/Hybris job issue [EOM]");
+		// Set Subject: header field
+		// Calendar now = Calendar.getInstance();
+		// message.setSubject(reportname+": COMPLETE -- No CloverETL/Hybris job
+		// issue [EOM]");
 
-			// Create the message part
-			BodyPart messageBodyPart = new MimeBodyPart();
+		// Create the message part
+		BodyPart messageBodyPart = new MimeBodyPart();
 
-			// Now set the actual message
+		// Now set the actual message
 
-			// messageBodyPart.setContent("<h3>Please check the attached for
-			// report " + reportname + "</h3><br>", "text/html");
+		// messageBodyPart.setContent("<h3>Please check the attached for
+		// report " + reportname + "</h3><br>", "text/html");
 
-			messageBodyPart.setContent(getEmailContent(), "text/html");
-			
-			//Check all job is done?
-			// Set To: header field of the header.
-			if (Tool.isAllJobDoneSuccessfully(reports,isATSGetStuck)){
-				message.setSubject(reportname+": COMPLETE -- No CloverETL/Hybris job issue [EOM]");
-				message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(emailtosuccess));
-				if (emailccsuccess != null) {
-					message.setRecipients(Message.RecipientType.CC, InternetAddress.parse(emailccsuccess));
-				}
+		messageBodyPart.setContent(getEmailContent(), "text/html");
 
-			}
-			else
-			{
-				message.setSubject(reportname);
-				message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(emailto));
-				if (emailcc != null) {
-					message.setRecipients(Message.RecipientType.CC, InternetAddress.parse(emailcc));
-				}
-
+		// Check all job is done?
+		// Set To: header field of the header.
+		if (Tool.isAllJobDoneSuccessfully(reports, isATSGetStuck)) {
+			message.setSubject(reportname + ": COMPLETE -- No CloverETL/Hybris job issue [EOM]");
+			message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(emailtosuccess));
+			if (emailccsuccess != null) {
+				message.setRecipients(Message.RecipientType.CC, InternetAddress.parse(emailccsuccess));
 			}
 
-			// Create a multipar message
-			Multipart multipart = new MimeMultipart();
+		} else {
+			message.setSubject(reportname);
+			message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(emailto));
+			if (emailcc != null) {
+				message.setRecipients(Message.RecipientType.CC, InternetAddress.parse(emailcc));
+			}
 
-			// Set text message part
-			multipart.addBodyPart(messageBodyPart);
+		}
 
-			// Part two is attachment
-			// messageBodyPart = new MimeBodyPart();
+		// Create a multipar message
+		Multipart multipart = new MimeMultipart();
 
-			// DataSource source = new FileDataSource(filepath);
-			// messageBodyPart.setDataHandler(new DataHandler(source));
-			// messageBodyPart.setFileName(new File(filepath).getName());
-			// multipart.addBodyPart(messageBodyPart);
+		// Set text message part
+		multipart.addBodyPart(messageBodyPart);
 
-			// Send the complete message parts
-			message.setContent(multipart);
+		// Part two is attachment
+		// messageBodyPart = new MimeBodyPart();
 
-			message.setSentDate(new Date());
+		// DataSource source = new FileDataSource(filepath);
+		// messageBodyPart.setDataHandler(new DataHandler(source));
+		// messageBodyPart.setFileName(new File(filepath).getName());
+		// multipart.addBodyPart(messageBodyPart);
 
-			/// message.setRecipients(Message.RecipientType.TO,
-			/// InternetAddress.parse(toEmail, false));*/
-			System.out.println("Message is ready");
-			// use TWM
-			// Transport.send(message);
+		// Send the complete message parts
+		message.setContent(multipart);
 
-			// use gmail
+		message.setSentDate(new Date());
 
-			Transport transport = session.getTransport("smtp");
+		/// message.setRecipients(Message.RecipientType.TO,
+		/// InternetAddress.parse(toEmail, false));*/
+		System.out.println("Message is ready");
+		// use TWM
+		// Transport.send(message);
 
-			// Enter your correct gmail UserID and Password
-			// if you have 2FA enabled then provide App Specific Password
-			transport.connect("smtp.gmail.com", "twmpsnotification", "Grapes123!");
+		// use gmail
 
-			transport.sendMessage(message, message.getAllRecipients());
-			// use gmail
+		Transport transport = session.getTransport("smtp");
 
-			System.out.println("EMail Sent Successfully!!");
+		// Enter your correct gmail UserID and Password
+		// if you have 2FA enabled then provide App Specific Password
+		transport.connect("smtp.gmail.com", "twmpsnotification", "Grapes123!");
+
+		transport.sendMessage(message, message.getAllRecipients());
+		// use gmail
+
+		System.out.println("EMail Sent Successfully!!");
 
 	}
 
@@ -725,7 +726,7 @@ public class Main {
 						htmlcontent.append("<th style = \"border: 1px solid white;color:red;\"  > "
 								+ reports.get(entry).getStatus() + "</th>");
 						reports.get(entry).setStatus("FAILURE");
-						
+
 					}
 				}
 
