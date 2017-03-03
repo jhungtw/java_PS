@@ -63,22 +63,7 @@ public class ReportAutomation {
 	static String production_mode;
 	static final String progressfilename = "progress.txt";
 
-	public void rerun() throws Exception {
 
-		// check file exists
-		// if not
-
-		// if yes
-
-		// check not done report
-
-		// if not exists
-		// remove file
-
-		// if exists
-		// run report
-
-	}
 
 	public void run() throws Exception {
 
@@ -88,7 +73,7 @@ public class ReportAutomation {
 		SchedulerFactory sf = new StdSchedulerFactory();
 		Scheduler sched = sf.getScheduler();
 
-		accessLog.info("------- Initialization Complete --------");
+		//accessLog.info("------- Initialization Complete --------");
 
 		accessLog.info("------- Scheduling Jobs ----------------");
 
@@ -99,12 +84,13 @@ public class ReportAutomation {
 		int numberOfReport = 0;
 		Calendar now = Calendar.getInstance();
 
-		System.out.println("Time is " + now.getTime().toString());
+		accessLog.info("Now is " + now.getTime().toString());
 
 		// *********************************************************************************
 		if (production_mode.equalsIgnoreCase("enabled")) {
 
 			System.out.println("Run with Production Mode");
+			accessLog.info("Run with Production Mode");
 
 			for (String entry : reports.keySet()) {
 				// System.out.println("Key : " + entry + " Value : " +
@@ -118,6 +104,7 @@ public class ReportAutomation {
 					System.out.println(reports.get(entry).getName() + " is enabled");
 					job = setJobDetail(entry, reports.get(entry));
 					Trigger trigger = null;
+					/* disable cron scheduling
 					if (configs.get("exec.strategy").equalsIgnoreCase(ExecutionStrategy.CRON_EXPRESSION.toString())) {
 
 						trigger = (CronTrigger) newTrigger().withIdentity("trigger" + numberOfReport, "group1")
@@ -126,6 +113,7 @@ public class ReportAutomation {
 						accessLog.info(job.getKey() + " has been scheduled to run at and repeat based on expression: "
 								+ ((CronTrigger) trigger).getCronExpression());
 					}
+					*/
 
 					if (configs.get("exec.strategy").equalsIgnoreCase(ExecutionStrategy.FIXED_INTERVAL.toString())) {
 						System.out.println("Before adding interval: Time is " + now.getTime().toString());
@@ -141,12 +129,14 @@ public class ReportAutomation {
 
 				} else {
 					System.out.println(reports.get(entry).getName() + " is disabled");
+					accessLog.info(reports.get(entry).getName() + " is disabled");
 				}
 
 			}
 		} else {
 
 			System.out.println("Run with Test Mode");
+			accessLog.info("Run with Test Mode");
 
 			for (String entry : reports.keySet()) {
 				// System.out.println("Key : " + entry + " Value : " +
@@ -168,6 +158,7 @@ public class ReportAutomation {
 
 				} else {
 					System.out.println(reports.get(entry).getName() + " is disabled");
+					accessLog.info(reports.get(entry).getName() + " is disabled");
 				}
 
 			}
@@ -317,14 +308,26 @@ public class ReportAutomation {
 
 		if (production_mode.equalsIgnoreCase("enabled")) {
 			jd = newJob(ReportJob.class).withIdentity(entry, "group1")
-					.usingJobData("query", reports.get(entry).getContent()).usingJobData("hybris.user", hybris_user)
+					.usingJobData("name", reports.get(entry).getName())
+					.usingJobData("query", reports.get(entry).getContent())
+					
+					.usingJobData("hybris.user", hybris_user)
 					.usingJobData("hybris.password", hybris_pass)
 					.usingJobData("smtp.user", smtp_user)
 					.usingJobData("smtp.password", smtp_password)
+					.usingJobData("output.format", reports.get(entry).getOutput_format())
+					.usingJobData("output.filename", reports.get(entry).getOutput_filename())
 					.usingJobData("password.protected", reports.get(entry).isPassword_protected())
 					.usingJobData("password", reports.get(entry).getPassword())
+					.usingJobData("email.notification", reports.get(entry).isEmail_notification())
 					.usingJobData("email.to", reports.get(entry).getEmail_to())
 					.usingJobData("email.cc", reports.get(entry).getEmail_cc())
+					.usingJobData("ftp.notification", reports.get(entry).isFtp_notification())
+					.usingJobData("ftp.host", reports.get(entry).getFtp_host())
+					.usingJobData("ftp.folder", reports.get(entry).getFtp_folder())
+					.usingJobData("ftp.username", reports.get(entry).getFtp_username())
+					.usingJobData("ftp.password", reports.get(entry).getFtp_password())
+					.usingJobData("backup.notification", reports.get(entry).isBackup_notification())
 					.usingJobData("report.name", reports.get(entry).getName()).usingJobData("report.key", entry)
 					.usingJobData("temp.folder", configs.get("temp.folder"))
 					.usingJobData("email.test", configs.get("email.test"))
@@ -332,12 +335,18 @@ public class ReportAutomation {
 					.usingJobData("report.frequency", reports.get(entry).getFrequency()).build();
 		} else {
 			jd = newJob(ReportJob.class).withIdentity(entry, "group1")
+					.usingJobData("name", reports.get(entry).getName())
 					.usingJobData("query", reports.get(entry).getContent()).usingJobData("hybris.user", hybris_user)
 					.usingJobData("hybris.password", hybris_pass)
 					.usingJobData("smtp.user", smtp_user)
 					.usingJobData("smtp.password", smtp_password)
+					.usingJobData("output.format", reports.get(entry).getOutput_format())
+					.usingJobData("output.filename", reports.get(entry).getOutput_filename())
 					.usingJobData("email.to", configs.get("email.test"))
 					.usingJobData("email.cc", configs.get("email.test"))
+					.usingJobData("email.notification", "true")
+					.usingJobData("ftp.notification", "false")
+					.usingJobData("backup.notification", "false")
 					.usingJobData("password.protected", reports.get(entry).isPassword_protected())
 					.usingJobData("password", reports.get(entry).getPassword())
 					.usingJobData("report.name", reports.get(entry).getName()).usingJobData("report.key", entry)

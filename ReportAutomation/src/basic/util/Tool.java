@@ -9,6 +9,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.net.SocketException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -61,6 +62,7 @@ import org.yaml.snakeyaml.Yaml;
 import basic.config.DoneStatus;
 import basic.config.Report;
 import basic.config.StatusMapBean;
+
 import jcifs.smb.NtlmPasswordAuthentication;
 import jcifs.smb.SmbFile;
 import jcifs.smb.SmbFileOutputStream;
@@ -90,9 +92,6 @@ public class Tool {
 		zipFile.addFile(new File(filePath), zipParameters);
 		return destinationZipFilePath;
 	}
-	
-
-	
 
 	public static String getWeekDayName(int index) {
 
@@ -115,11 +114,16 @@ public class Tool {
 
 		// 1.when enabled: true
 		for (String entry : reports.keySet()) {
-			
-		//	System.out.println("-->"+reports.get(entry).getTrigger_day()+reports.get(entry).isEnabled()+getWeekDayName(dt.getDayOfWeek()));
-			
+
+			// System.out.println("-->"+reports.get(entry).getTrigger_day()+reports.get(entry).isEnabled()+getWeekDayName(dt.getDayOfWeek()));
+
 			if (reports.get(entry).isEnabled()) {
 				// System.out.println(" enabled!!!");
+				// 2.0 when frequency: DAILY
+				if (reports.get(entry).getFrequency().equalsIgnoreCase(ReportFrequency.DAILY.toString())) {
+					// 2.0.1 nothing
+
+				}
 				// 2.1 when frequency: WEEK
 				if (reports.get(entry).getFrequency().equalsIgnoreCase(ReportFrequency.WEEK.toString())) {
 					// 2.1.1 when trigger_day not matched
@@ -141,46 +145,44 @@ public class Tool {
 
 				}
 			}
-		
-			
-		
+
 		}
 		System.out.println("reports is : " + reports.toString());
 
-/*
-		today.setFirstDayOfWeek(Calendar.MONDAY);
-
-		System.out.println("today: " + today.getTime().toString());
-
-		boolean isMonth = (today.get(Calendar.DAY_OF_MONTH) == 1);
-		boolean isWeek = (today.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY);
-
-		System.out.println("isMonth//isWeek : " + isMonth + "//" + isWeek);
-
-		if (!isWeek) {
-
-			for (String entry : reports.keySet()) {
-				if (reports.get(entry).getFrequency().equalsIgnoreCase(ReportFrequency.WEEK.toString()))
-					reports.get(entry).setEnabled(false);
-				System.out.println("Key : " + entry + " Value : " + reports.get(entry).toString());
-
-			}
-
-		}
-
-		if (!isMonth)
-
-		{
-			for (String entry : reports.keySet()) {
-				System.out.println("-->Key : " + entry + " Value : " + reports.get(entry).toString());
-				if (reports.get(entry).getFrequency().equalsIgnoreCase(ReportFrequency.MONTH.toString()))
-					reports.get(entry).setEnabled(false);
-				System.out.println("Key : " + entry + " Value : " + reports.get(entry).toString());
-
-			}
-		}
-		System.out.println("reports is : " + reports.toString());
-	*/
+		/*
+		 * today.setFirstDayOfWeek(Calendar.MONDAY);
+		 * 
+		 * System.out.println("today: " + today.getTime().toString());
+		 * 
+		 * boolean isMonth = (today.get(Calendar.DAY_OF_MONTH) == 1); boolean
+		 * isWeek = (today.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY);
+		 * 
+		 * System.out.println("isMonth//isWeek : " + isMonth + "//" + isWeek);
+		 * 
+		 * if (!isWeek) {
+		 * 
+		 * for (String entry : reports.keySet()) { if
+		 * (reports.get(entry).getFrequency().equalsIgnoreCase(ReportFrequency.
+		 * WEEK.toString())) reports.get(entry).setEnabled(false);
+		 * System.out.println("Key : " + entry + " Value : " +
+		 * reports.get(entry).toString());
+		 * 
+		 * }
+		 * 
+		 * }
+		 * 
+		 * if (!isMonth)
+		 * 
+		 * { for (String entry : reports.keySet()) {
+		 * System.out.println("-->Key : " + entry + " Value : " +
+		 * reports.get(entry).toString()); if
+		 * (reports.get(entry).getFrequency().equalsIgnoreCase(ReportFrequency.
+		 * MONTH.toString())) reports.get(entry).setEnabled(false);
+		 * System.out.println("Key : " + entry + " Value : " +
+		 * reports.get(entry).toString());
+		 * 
+		 * } } System.out.println("reports is : " + reports.toString());
+		 */
 		return reports;
 
 	}
@@ -290,9 +292,37 @@ public class Tool {
 		return sb.toString();
 	}
 
-	
-	public static void saveResultsetToExcelWithPassword(String reportname, ResultSet rs, String filepath,String password)
-			throws SQLException, IOException, GeneralSecurityException {
+	public static String getOutputFilePathWithFormat(String format, String reportname, String tmpfolder,
+			String extension) {
+
+		System.out.println("tmpfolder is " + tmpfolder);
+		String report = reportname.trim().replaceAll(" ", "_").toLowerCase();
+
+		StringBuilder sb = new StringBuilder();
+
+		if (format.contains("[") && format.contains("]")) {
+			String dateFormat = format.substring(format.indexOf("[")+1, format.indexOf("]"));
+			String bf_dateformat = format.substring(0, format.indexOf("[") - 1);
+			String af_dateformat = "";
+			if (format.length() > (format.indexOf("]") + 1)) {
+				af_dateformat = format.substring(format.indexOf("]") + 1, format.length());
+			}
+
+			System.out.println("Date format is : " + dateFormat);
+			sb.append(tmpfolder).append("\\").append(bf_dateformat)
+					.append(new SimpleDateFormat(dateFormat).format(Calendar.getInstance().getTime()))
+					.append(af_dateformat).append(".").append(extension.toLowerCase());
+
+		} else {
+			sb.append(tmpfolder).append("\\").append(report).append("_")
+					.append(new SimpleDateFormat("yyyy-MM-dd").format(Calendar.getInstance().getTime())).append(".")
+					.append(extension.toLowerCase());
+		}
+		return sb.toString().replace(" ", "_");
+	}
+
+	public static void saveResultsetToExcelWithPassword(String reportname, ResultSet rs, String filepath,
+			String password) throws SQLException, IOException, GeneralSecurityException {
 		// ***********************************************************
 		// implement save file
 		// ***********************************************************
@@ -341,34 +371,86 @@ public class Tool {
 		}
 
 		// dsiable by test
-		//FileOutputStream out = new FileOutputStream(new File(filepath));
-		
-		//prepare password
-		EncryptionInfo info = new EncryptionInfo(EncryptionMode.agile,
-		CipherAlgorithm.aes192, HashAlgorithm.sha384, -1, -1, null);
+		// FileOutputStream out = new FileOutputStream(new File(filepath));
+
+		// prepare password
+		EncryptionInfo info = new EncryptionInfo(EncryptionMode.agile, CipherAlgorithm.aes192, HashAlgorithm.sha384, -1,
+				-1, null);
 
 		Encryptor enc = info.getEncryptor();
 		enc.confirmPassword(password);
-		
-		
+
 		// Encrypt
 		// OutputStream out = enc.getDataStream(new POIFSFileSystem());
 		POIFSFileSystem fs = new POIFSFileSystem();
 		OutputStream out = enc.getDataStream(fs);
 
 		wb.write(out);
-		//out.close();
-		//wb.close();
-		
+		// out.close();
+		// wb.close();
+
 		// Save
 		FileOutputStream fos = new FileOutputStream(filepath);
 		fs.writeFilesystem(fos);
-		fos.close(); 
+		fos.close();
 		wb.close();
-		
-		
 
 	}
+
+	public static void saveResultsetToCSV(ResultSet rs, String filepath) throws FileNotFoundException, SQLException {
+
+		// TableColumn col;
+		// ObservableList<String> rows;
+		StringBuilder dataHeaders = new StringBuilder();
+		StringBuilder dataRow = new StringBuilder();
+		PrintWriter csvWriter = new PrintWriter(new File(filepath));
+
+		ArrayList<String> headers = new ArrayList<String>();
+		ArrayList<ArrayList<String>> rows = new ArrayList<ArrayList<String>>();
+
+		headers = getHeadersFromResultset(rs);
+		// accessLog.info("headers" + headers.size());
+		rows = getRowsFromResultset(rs);
+
+		int numberOfColumns = headers.size();
+		int numberOfRows = rows.size();
+
+		for (int i = 0; i < numberOfColumns; i++) {
+
+			if (i == 0) {
+				dataHeaders.append("\"" + headers.get(i).toString() + "\"");
+			} else {
+				dataHeaders.append(",\"" + headers.get(i).toString() + "\"");
+			}
+
+			System.out.println("dddd" + headers.get(i).toString() + "pppp");
+
+		}
+		csvWriter.println(dataHeaders);
+		int j = 0;
+		for (ArrayList<String> tmp : rows) {
+			dataRow = new StringBuilder();
+			System.out.println("%%%%%  " + tmp.toString());
+			j = 0;
+			for (String cell : tmp) {
+
+				if (j == 0) {
+					dataRow.append("\"" + tmp.get(j).toString() + "\"");
+				} else {
+					dataRow.append(",\"" + tmp.get(j).toString() + "\"");
+				}
+
+				j++;
+
+				System.out.println("XXXXX " + cell.toString());
+			}
+			csvWriter.println(dataRow);
+		}
+
+		csvWriter.close();
+
+	}
+
 	public static void saveResultsetToExcel(String reportname, ResultSet rs, String filepath)
 			throws SQLException, IOException, GeneralSecurityException {
 		// ***********************************************************
@@ -418,18 +500,11 @@ public class Tool {
 			index++;
 		}
 
-	
 		FileOutputStream out = new FileOutputStream(new File(filepath));
-		
-		
 
 		wb.write(out);
 		out.close();
 		wb.close();
-		
-
-		
-		
 
 	}
 
@@ -640,7 +715,7 @@ public class Tool {
 
 	}
 
-	public static void copyFiles(String protocol, String host, String user, String password, String localFileFullName,
+	public static void copyFilesToFtpFolder(String host, String user, String password, String localFileFullName,
 			String fileName, String hostDir) throws Exception {
 		System.out.println("Start copy");
 		FTPClient ftp = new FTPClient();
@@ -688,7 +763,8 @@ public class Tool {
 
 			// Set Subject: header field
 			Calendar now = Calendar.getInstance();
-			message.setSubject("[REPORT] "+reportname + " on " + (now.get(Calendar.MONTH) + 1) + "-" + now.get(Calendar.DATE));
+			message.setSubject(
+					"[REPORT] " + reportname + " on " + (now.get(Calendar.MONTH) + 1) + "-" + now.get(Calendar.DATE));
 
 			// Create the message part
 			BodyPart messageBodyPart = new MimeBodyPart();

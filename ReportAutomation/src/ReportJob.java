@@ -6,6 +6,8 @@ import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -36,6 +38,7 @@ import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.quartz.JobKey;
 
+import basic.util.ReportOutputFormat;
 import basic.util.Tool;
 
 public class ReportJob implements Job {
@@ -74,9 +77,23 @@ public class ReportJob implements Job {
 			String HYBRIS_PASSWORD = data.getString("hybris.password");
 
 			String query = null;
-			switch (data.getString("report.frequency")) {
+			DateTime dt = new DateTime();
+			switch (data.getString("report.frequency").toUpperCase()) {
+			case "DAILY":
+
+				System.out.println("XXXXXX" + new DateTime(dt.getYear(), dt.getMonthOfYear(), 1, 0, 0, 0).minusMonths(1)
+						.toString(DateTimeFormat.forPattern("YYYY-MM-dd")));
+				System.out.println("XXXXXX" + new DateTime(dt.getYear(), dt.getMonthOfYear(), 1, 0, 0, 0)
+						.toString(DateTimeFormat.forPattern("YYYY-MM-dd")));
+
+				query = Tool.addQueryInterval(data.getString("query"),
+						new DateTime(dt.getYear(), dt.getMonthOfYear(), 1, 0, 0, 0).minusDays(1)
+								.toString(DateTimeFormat.forPattern("YYYY-MM-dd")),
+						new DateTime(dt.getYear(), dt.getMonthOfYear(), 1, 0, 0, 0)
+								.toString(DateTimeFormat.forPattern("YYYY-MM-dd")));
+				break;
 			case "MONTH":
-				DateTime dt = new DateTime();
+
 				System.out.println("XXXXXX" + new DateTime(dt.getYear(), dt.getMonthOfYear(), 1, 0, 0, 0).minusMonths(1)
 						.toString(DateTimeFormat.forPattern("YYYY-MM-dd")));
 				System.out.println("XXXXXX" + new DateTime(dt.getYear(), dt.getMonthOfYear(), 1, 0, 0, 0)
@@ -123,34 +140,72 @@ public class ReportJob implements Job {
 			// ***********************************************************
 			// implement save file
 			// ***********************************************************
+            // generate output file name
+			String filepath = "";
+			System.out.println("output.filename is "+data.getString("output.filename"));;
+			if (data.getString("output.filename") != "null") {
+				if (data.getString("output.format").equalsIgnoreCase("csv")) {
+				filepath = Tool.getOutputFilePathWithFormat(data.getString("output.filename"), data.getString("name"), data.getString("temp.folder"), "csv");
 
-			String filepath = Tool.getOutputFilePath(data.getString("report.key"), data.getString("report.name"),
-					data.getString("temp.folder"));
-			if (data.getBooleanValue("password.protected")) {
-				Tool.saveResultsetToExcelWithPassword(data.getString("report.name"), rs, filepath,
-						data.getString("password"));
-				accessLog.info("Saved output as " + filepath);
+				}
+				if (data.getString("output.format").equalsIgnoreCase("excel")) {
+					filepath = Tool.getOutputFilePathWithFormat(data.getString("output.filename"), data.getString("name"), data.getString("temp.folder"), "xlsx");
 
+					}
 			} else {
-				Tool.saveResultsetToExcel(data.getString("report.name"), rs, filepath);
-				accessLog.info("Saved output as " + filepath);
+				filepath = Tool.getOutputFilePath(data.getString("report.key"), data.getString("report.name"),
+						data.getString("temp.folder"));
+			}
+			// save as excel or csv
+			switch (data.getString("output.format").toUpperCase()) {
+			case "XLSX": {
+
+				if (data.getBooleanValue("password.protected")) {
+					Tool.saveResultsetToExcelWithPassword(data.getString("report.name"), rs, filepath,
+							data.getString("password"));
+					accessLog.info("Saved output as " + filepath);
+
+				} else {
+					Tool.saveResultsetToExcel(data.getString("report.name"), rs, filepath);
+					accessLog.info("Saved output as " + filepath);
+				}
+				break;
 			}
 
-			// PII data?
-			// System.out.println(">>>>>>>>>>>>>>>>>" + filepath);
-			// System.out.println(">>>>>>>>>>>>>>>>>" +
-			// data.getBooleanValue("password.protected"));
-			// PII data
-			// if (data.getBooleanValue("password.protected")) {
-			// filepath = Tool.packLocal(filepath, data.getString("password"));
+			case "CSV": {
 
-			// }
+				Tool.saveResultsetToCSV(rs, filepath);
+				accessLog.info("Saved output as " + filepath);
 
-			// System.out.println(">>>>>>>>>>>>>>>>>" + filepath);
+				break;
+			}
+			default:
 
-			Tool.sendEmailByTWMSmtp(data.getString("smtp.user"), data.getString("email.to"), data.getString("email.cc"),
-					data.getString("report.name"), filepath);
-			accessLog.info("Send email is done ");
+				break;
+			}
+
+			// send email?
+
+			if (data.getBooleanValue("email.notification")) {
+				Tool.sendEmailByTWMSmtp(data.getString("smtp.user"), data.getString("email.to"),
+						data.getString("email.cc"), data.getString("report.name"), filepath);
+
+				accessLog.info("Send email is done ");
+			}
+
+			// ftp file?
+
+			if (data.getBooleanValue("ftp.notification")) {
+				System.out.println("before ftp: "+data.getString("ftp.host")+"--"+filepath);
+				Path p = Paths.get(filepath);
+				String remotefile = p.getFileName().toString();
+				Tool.copyFilesToFtpFolder(data.getString("ftp.host"), data.getString("ftp.username"),
+						data.getString("ftp.password"), filepath, remotefile, data.getString("ftp.folder"));
+
+				accessLog.info("ftp is done ");
+			}
+
+			// backup file?
 
 		} catch (Exception e) {
 			// implement log job status is not done
