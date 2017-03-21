@@ -1,3 +1,6 @@
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.io.*;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
@@ -6,6 +9,8 @@ import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 
+import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Connection;
@@ -13,32 +18,11 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Calendar;
+
 import java.util.Date;
-import java.util.Properties;
 
-import javax.activation.DataHandler;
-import javax.activation.DataSource;
-import javax.activation.FileDataSource;
-import javax.mail.BodyPart;
-import javax.mail.Message;
-import javax.mail.MessagingException;
-import javax.mail.Multipart;
-import javax.mail.NoSuchProviderException;
-import javax.mail.Session;
-import javax.mail.Transport;
-import javax.mail.internet.AddressException;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeBodyPart;
-import javax.mail.internet.MimeMessage;
-import javax.mail.internet.MimeMultipart;
-
-import org.quartz.Job;
-import org.quartz.JobExecutionContext;
-import org.quartz.JobExecutionException;
 import org.quartz.JobKey;
 
-import basic.util.ReportOutputFormat;
 import basic.util.Tool;
 
 public class ReportJob implements Job {
@@ -80,16 +64,16 @@ public class ReportJob implements Job {
 			DateTime dt = new DateTime();
 			switch (data.getString("report.frequency").toUpperCase()) {
 			case "DAILY":
-
+				System.out.println("daily job");
 				System.out.println("XXXXXX" + new DateTime(dt.getYear(), dt.getMonthOfYear(), 1, 0, 0, 0).minusMonths(1)
 						.toString(DateTimeFormat.forPattern("YYYY-MM-dd")));
 				System.out.println("XXXXXX" + new DateTime(dt.getYear(), dt.getMonthOfYear(), 1, 0, 0, 0)
 						.toString(DateTimeFormat.forPattern("YYYY-MM-dd")));
 
 				query = Tool.addQueryInterval(data.getString("query"),
-						new DateTime(dt.getYear(), dt.getMonthOfYear(), 1, 0, 0, 0).minusDays(1)
+						new DateTime(dt.getYear(), dt.getMonthOfYear(), dt.getDayOfMonth(), 0, 0, 0).minusDays(1)
 								.toString(DateTimeFormat.forPattern("YYYY-MM-dd")),
-						new DateTime(dt.getYear(), dt.getMonthOfYear(), 1, 0, 0, 0)
+						new DateTime(dt.getYear(), dt.getMonthOfYear(), dt.getDayOfMonth(), 0, 0, 0)
 								.toString(DateTimeFormat.forPattern("YYYY-MM-dd")));
 				break;
 			case "MONTH":
@@ -140,25 +124,28 @@ public class ReportJob implements Job {
 			// ***********************************************************
 			// implement save file
 			// ***********************************************************
-            // generate output file name
+			// generate output file name
 			String filepath = "";
-			System.out.println("output.filename is "+data.getString("output.filename"));;
-			if (data.getString("output.filename") != "null") {
+			System.out.println("output.filename is " + data.getString("output.filename"));
+			;
+			if (StringUtils.isNotEmpty(data.getString("output.filename"))) {
 				if (data.getString("output.format").equalsIgnoreCase("csv")) {
-				filepath = Tool.getOutputFilePathWithFormat(data.getString("output.filename"), data.getString("name"), data.getString("temp.folder"), "csv");
+					filepath = Tool.getOutputFilePathWithFormat(data.getString("output.filename"),
+							data.getString("name"), data.getString("temp.folder"), "csv");
 
 				}
 				if (data.getString("output.format").equalsIgnoreCase("excel")) {
-					filepath = Tool.getOutputFilePathWithFormat(data.getString("output.filename"), data.getString("name"), data.getString("temp.folder"), "xlsx");
+					filepath = Tool.getOutputFilePathWithFormat(data.getString("output.filename"),
+							data.getString("name"), data.getString("temp.folder"), "xlsx");
 
-					}
+				}
 			} else {
 				filepath = Tool.getOutputFilePath(data.getString("report.key"), data.getString("report.name"),
-						data.getString("temp.folder"));
+						data.getString("temp.folder"), data.getString("output.format"));
 			}
 			// save as excel or csv
 			switch (data.getString("output.format").toUpperCase()) {
-			case "XLSX": {
+			case "EXCEL": {
 
 				if (data.getBooleanValue("password.protected")) {
 					Tool.saveResultsetToExcelWithPassword(data.getString("report.name"), rs, filepath,
@@ -167,7 +154,7 @@ public class ReportJob implements Job {
 
 				} else {
 					Tool.saveResultsetToExcel(data.getString("report.name"), rs, filepath);
-					accessLog.info("Saved output as " + filepath);
+					accessLog.info("No password--Saved output as " + filepath);
 				}
 				break;
 			}
@@ -175,7 +162,7 @@ public class ReportJob implements Job {
 			case "CSV": {
 
 				Tool.saveResultsetToCSV(rs, filepath);
-				accessLog.info("Saved output as " + filepath);
+				accessLog.info("Save AS CSV--Saved output as " + filepath);
 
 				break;
 			}
@@ -196,16 +183,43 @@ public class ReportJob implements Job {
 			// ftp file?
 
 			if (data.getBooleanValue("ftp.notification")) {
-				System.out.println("before ftp: "+data.getString("ftp.host")+"--"+filepath);
+				System.out.println("before ftp: " + data.getString("ftp.host") + "--" + filepath);
+				accessLog.info("ftp is starting ");
 				Path p = Paths.get(filepath);
 				String remotefile = p.getFileName().toString();
-				Tool.copyFilesToFtpFolder(data.getString("ftp.host"), data.getString("ftp.username"),
-						data.getString("ftp.password"), filepath, remotefile, data.getString("ftp.folder"));
+				System.out.println("host:" + data.getString("ftp.host") + "//filepath:" + filepath + "//remotefile:"
+						+ remotefile + "//remotefolder:" + data.getString("ftp.folder"));
+
+				if (data.getString("ftp.port").equalsIgnoreCase("22")) {
+					//ftp over ssh
+					Tool.copyFilesToFtpFolderOverSSH(data.getString("ftp.host"), data.getString("ftp.username"),
+							data.getString("ftp.password"), filepath, remotefile, data.getString("ftp.folder"));
+
+				} else {
+					//normal ftp
+					Tool.copyFilesToFtpFolder(data.getString("ftp.host"), data.getString("ftp.username"),
+							data.getString("ftp.password"), filepath, remotefile, data.getString("ftp.folder"));
+
+				}
 
 				accessLog.info("ftp is done ");
 			}
 
 			// backup file?
+
+			if (data.getBooleanValue("backup.notification")) {
+				System.out.println("before backup: " + data.getString("ftp.host") + "--" + filepath);
+				accessLog.info("backup is starting ");
+				File source = new File(filepath);
+
+				Path p = Paths.get(filepath);
+				String remotefile = p.getFileName().toString();
+				System.out.println("--->" + data.getString("backup.folder") + "\\" + remotefile);
+				File dest = new File(data.getString("backup.folder") + "\\" + remotefile);
+				FileUtils.copyFile(source, dest);
+
+				accessLog.info("backup is done ");
+			}
 
 		} catch (Exception e) {
 			// implement log job status is not done

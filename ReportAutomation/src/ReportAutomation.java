@@ -2,35 +2,20 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.Map;
 import java.util.Properties;
 
-import javax.mail.Message;
-import javax.mail.MessagingException;
-import javax.mail.NoSuchProviderException;
 import javax.mail.Session;
-import javax.mail.Transport;
-import javax.mail.internet.AddressException;
-import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 
-import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 
 import org.apache.log4j.RollingFileAppender;
-import org.quartz.CronTrigger;
 import org.quartz.JobDetail;
 import org.quartz.Scheduler;
-import org.quartz.SchedulerException;
 import org.quartz.SchedulerFactory;
 import org.quartz.SchedulerMetaData;
 import org.quartz.SimpleTrigger;
@@ -41,10 +26,8 @@ import org.yaml.snakeyaml.Yaml;
 import basic.config.MapBean;
 import basic.config.Report;
 import basic.util.ExecutionStrategy;
-import basic.util.ReportFrequency;
 import basic.util.Tool;
 
-import static org.quartz.CronScheduleBuilder.cronSchedule;
 import static org.quartz.JobBuilder.newJob;
 import static org.quartz.TriggerBuilder.newTrigger;
 
@@ -218,13 +201,10 @@ public class ReportAutomation {
 		accessLog = Logger.getLogger("ReportAutomationLog");
 		accessLog.setLevel(Level.INFO);
 
-		// disable monthly report on 1st day of week, or disable weekly report
-		// on 1st day of month
 
-		// if no enabled report exists, end execution.
 
 		// Disable reports not in right schedule
-		// remove reports not in right schedule
+	
 		if (production_mode.equalsIgnoreCase("enabled")) {
 			reports = Tool.disableIrrelevantReports(reports);
 		}
@@ -324,10 +304,12 @@ public class ReportAutomation {
 					.usingJobData("email.cc", reports.get(entry).getEmail_cc())
 					.usingJobData("ftp.notification", reports.get(entry).isFtp_notification())
 					.usingJobData("ftp.host", reports.get(entry).getFtp_host())
+					.usingJobData("ftp.port", reports.get(entry).getFtp_port())
 					.usingJobData("ftp.folder", reports.get(entry).getFtp_folder())
 					.usingJobData("ftp.username", reports.get(entry).getFtp_username())
 					.usingJobData("ftp.password", reports.get(entry).getFtp_password())
 					.usingJobData("backup.notification", reports.get(entry).isBackup_notification())
+					.usingJobData("backup.folder", reports.get(entry).getBackup_folder())
 					.usingJobData("report.name", reports.get(entry).getName()).usingJobData("report.key", entry)
 					.usingJobData("temp.folder", configs.get("temp.folder"))
 					.usingJobData("email.test", configs.get("email.test"))

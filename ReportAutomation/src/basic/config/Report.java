@@ -18,10 +18,12 @@ public class Report {
 	private String email_cc;
 	private boolean ftp_notification;
 	private String ftp_host;
+	private String ftp_port;
 	private String ftp_folder;
 	private String ftp_username;
 	private String ftp_password;
 	private boolean backup_notification;
+	private String backup_folder;
 	public String getType() {
 		return type;
 	}
@@ -112,6 +114,12 @@ public class Report {
 	public void setFtp_host(String ftp_host) {
 		this.ftp_host = ftp_host;
 	}
+	public String getFtp_port() {
+		return ftp_port;
+	}
+	public void setFtp_port(String ftp_port) {
+		this.ftp_port = ftp_port;
+	}
 	public String getFtp_folder() {
 		return ftp_folder;
 	}
@@ -136,15 +144,26 @@ public class Report {
 	public void setBackup_notification(boolean backup_notification) {
 		this.backup_notification = backup_notification;
 	}
+	public String getBackup_folder() {
+		return backup_folder;
+	}
+	public void setBackup_folder(String backup_folder) {
+		this.backup_folder = backup_folder;
+	}
 	@Override
 	public String toString() {
 		return "Report [type=" + type + ", name=" + name + ", enabled=" + enabled + ", frequency=" + frequency
 				+ ", trigger_day=" + trigger_day + ", content=" + content + ", output_format=" + output_format
 				+ ", output_filename=" + output_filename + ", password_protected=" + password_protected + ", password="
 				+ password + ", email_notification=" + email_notification + ", email_to=" + email_to + ", email_cc="
-				+ email_cc + ", ftp_notification=" + ftp_notification + ", ftp_host=" + ftp_host + ", ftp_folder="
-				+ ftp_folder + ", ftp_username=" + ftp_username + ", ftp_password=" + ftp_password
-				+ ", backup_notification=" + backup_notification + "]";
+				+ email_cc + ", ftp_notification=" + ftp_notification + ", ftp_host=" + ftp_host + ", ftp_port="
+				+ ftp_port + ", ftp_folder=" + ftp_folder + ", ftp_username=" + ftp_username + ", ftp_password="
+				+ ftp_password + ", backup_notification=" + backup_notification + ", backup_folder=" + backup_folder
+				+ "]";
 	}
+
+	
+	
+	
 
 }

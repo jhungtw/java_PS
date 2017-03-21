@@ -172,7 +172,7 @@ public class ToolTestCase {
 	@Ignore
 	public void testGetOutputFilePath() {
 		System.out
-				.println("testGetFirstDayOfLastWeek: " + Tool.getOutputFilePath("R001", "Delivery types ", "c:\\tmp"));
+				.println("testGetFirstDayOfLastWeek: " + Tool.getOutputFilePath("R001", "Delivery types ", "c:\\tmp",null));
 		fail("Not yet implemented");
 	}
 
