@@ -86,6 +86,7 @@ public class Main {
 	private static Map<Integer, Job> reports = new HashMap<Integer, Job>();
 	private static Map<String, String> configs = new HashMap<String, String>();
 	private static boolean isATSGetStuck;
+	private static boolean isHotFolderGetStuck;
 	private static String dateFormat = "MM/dd/yyyy HH:mm:ss";
 	private static String color_headerBG = "#1D72D1";
 	private static String color_cellLight = "#cfdef7";
@@ -110,8 +111,11 @@ public class Main {
 				System.out.println("Starting Daily monitor report");
 				accessLog.info("Starting Daily monitor report");
 
-				isATSGetStuck = isATSStuck();
+				isATSGetStuck = isHotFolderGetStuck("/opt/dataload/import/");
 				accessLog.info("Get ATS stuck status is done");
+				
+				isHotFolderGetStuck= isHotFolderGetStuck("/opt/dataload/import/master/twm/processing");
+				accessLog.info("Get hot folder stuck status is done");
 
 				getCloverJobStatus();
 				accessLog.info("Get clover jobs's status is done");
@@ -155,7 +159,7 @@ public class Main {
 		appender.activateOptions();
 		Logger.getRootLogger().addAppender(appender);
 		Logger.getRootLogger().setLevel(Level.INFO);
-		System.out.println("2222");
+		//System.out.println("2222");
 
 		// Logger.getRootLogger().addAppender(cappender);
 
@@ -163,7 +167,7 @@ public class Main {
 
 	private static void readConfig() throws FileNotFoundException {
 
-		FileReader reader = new FileReader(new File("c:\\tmp\\dailymonitor33.properties"));
+		FileReader reader = new FileReader(new File("c:\\tmp\\dailymonitor.properties"));
 		Yaml yaml = new Yaml();
 		MapBean parsed = yaml.loadAs(reader, MapBean.class);
 
@@ -330,7 +334,7 @@ public class Main {
 
 	}
 
-	private static boolean isATSStuck() throws JSchException, IOException {
+	private static boolean isHotFolderGetStuck(String hotFolderPath) throws JSchException, IOException {
 
 		String user = configs.get("hotfolder.ssh.user");
 		String ip = configs.get("hotfolder.ip");
@@ -357,10 +361,10 @@ public class Main {
 		String tmp1 = dt.toString(DateTimeFormat.forPattern("yyyy-MM-dd"));
 		String tmp2 = dt.minusDays(1).toString(DateTimeFormat.forPattern("yyyy-MM-dd"));
 
-		System.out.println("cd  /opt/dataload/import && ls -ltr --full-time *ats* | grep -e '" + tmp1 + "' -e '" + tmp2
+		System.out.println("cd "+hotFolderPath +" && ls -ltr --full-time *ats* | grep -e '" + tmp1 + "' -e '" + tmp2
 				+ "' | wc -l");
 
-		((ChannelExec) channel).setCommand("cd  /opt/dataload/import && ls -ltr --full-time *ats* | grep -e '" + tmp1
+		((ChannelExec) channel).setCommand("cd "+hotFolderPath +" && ls -ltr --full-time *ats* | grep -e '" + tmp1
 				+ "' -e '" + tmp2 + "' | wc -l");
 
 		InputStream commandOutput = channel.getInputStream();
@@ -643,24 +647,24 @@ public class Main {
 			}
 			htmlcontent.append("<th style = \"border: 1px solid white;\">" + entry + "</th>");
 
-			htmlcontent.append("<th style = \"border: 1px solid white;\">" + reports.get(entry).getType() + "</th>");
+			htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + reports.get(entry).getType() + "</th>");
 			htmlcontent.append(
-					"<th style = \"border: 1px solid white;\">" + reports.get(entry).getDisplayname() + "</th>");
+					"<th style = \"border: 1px solid white;font-weight: normal;\">" + reports.get(entry).getDisplayname() + "</th>");
 			htmlcontent
-					.append("<th style = \"border: 1px solid white;\">" + reports.get(entry).getScheduled() + "</th>");
+					.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + reports.get(entry).getScheduled() + "</th>");
 
 			if (reports.get(entry).getStartTime() == null) {
-				htmlcontent.append("<th style = \"border: 1px solid white;\">" + "" + "</th>");
+				htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + "" + "</th>");
 			} else {
 				htmlcontent.append(
-						"<th style = \"border: 1px solid white;\">" + reports.get(entry).getStartTime() + "</th>");
+						"<th style = \"border: 1px solid white;font-weight: normal;\">" + reports.get(entry).getStartTime() + "</th>");
 			}
 
 			if (reports.get(entry).getEndTime() == null) {
-				htmlcontent.append("<th style = \"border: 1px solid white;\">" + "" + "</th>");
+				htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + "" + "</th>");
 			} else {
 				htmlcontent.append(
-						"<th style = \"border: 1px solid white;\">" + reports.get(entry).getEndTime() + "</th>");
+						"<th style = \"border: 1px solid white;font-weight: normal;\">" + reports.get(entry).getEndTime() + "</th>");
 			}
 
 			// duration
@@ -685,14 +689,14 @@ public class Main {
 					Period p = new Period(d1, d2);
 
 					htmlcontent.append(
-							"<th style = \"border: 1px solid white;\">" + p.toString(new PeriodFormatterBuilder()
+							"<th style = \"border: 1px solid white;font-weight: normal;\">" + p.toString(new PeriodFormatterBuilder()
 
 									.appendHours().appendSuffix("h").printZeroIfSupported().appendSeparator(":")
 									.appendMinutes().appendSuffix("m").printZeroIfSupported().minimumPrintedDigits(2)
 									.appendSeparator(":").appendSeconds().appendSuffix("s").minimumPrintedDigits(2)
 									.toFormatter()) + "</th>");
 				} else {
-					htmlcontent.append("<th style = \"border: 1px solid white;\">" + "N/A" + "</th>");
+					htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + "N/A" + "</th>");
 				}
 			} else {
 				// htmlcontent.append("<th style = \"border: 1px solid
@@ -700,30 +704,30 @@ public class Main {
 				// htmlcontent.append("<th style = \"border: 1px solid
 				// white;\">" + "" + "</th>");
 
-				htmlcontent.append("<th style = \"border: 1px solid white;\">" + "N/A" + "</th>");
+				htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + "N/A" + "</th>");
 
 			}
 
 			if (reports.get(entry).getStatus() == null) {
-				htmlcontent.append("<th style = \"border: 1px solid white;color:#847d1a;\" bgcolor=\""
+				htmlcontent.append("<th style = \"border: 1px solid white;color:#847d1a;font-weight: normal;\" bgcolor=\""
 						+ color_statusRunning + "\"> " + "NOT FOUND" + "</th>");
 				reports.get(entry).setStatus("NOT FOUND");
 
 			} else {
 
 				if (reports.get(entry).getStatus().contains(new StringBuilder("FINISH"))) {
-					htmlcontent.append("<th style = \"border: 1px solid white;color:green;\"   bgcolor=\""
+					htmlcontent.append("<th style = \"border: 1px solid white;color:green;font-weight: normal;\"   bgcolor=\""
 							+ color_statusSuccess + "\"> " + "SUCCESS" + "</th>");
 					reports.get(entry).setStatus("SUCCESS");
 
 				} else {
 					if (reports.get(entry).getStatus().contains(new StringBuilder("RUNN"))) {
-						htmlcontent.append("<th style = \"border: 1px solid white;color:#847d1a;\" bgcolor=\""
+						htmlcontent.append("<th style = \"border: 1px solid white;color:#847d1a;font-weight: normal;\" bgcolor=\""
 								+ color_statusRunning + "\"> " + reports.get(entry).getStatus() + "</th>");
 						reports.get(entry).setStatus("RUNNING");
 
 					} else {
-						htmlcontent.append("<th style = \"border: 1px solid white;color:red;\"  > "
+						htmlcontent.append("<th style = \"border: 1px solid white;color:red;font-weight: normal;\"  > "
 								+ reports.get(entry).getStatus() + "</th>");
 						reports.get(entry).setStatus("FAILURE");
 
@@ -741,24 +745,24 @@ public class Main {
 				for (Integer subindex : subjobs.keySet()) {
 					htmlcontent.append("<tr bgcolor=\"" + color_cellLight + "\">");
 
-					htmlcontent.append("<th style = \"border: 1px solid white;\">" + " " + "</th>");
+					htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + " " + "</th>");
 
-					htmlcontent.append("<th style = \"border: 1px solid white;\">" + " " + "</th>");
+					htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + " " + "</th>");
 					htmlcontent.append(
-							"<th style = \"border: 1px solid white;\">" + subjobs.get(subindex).getName() + "</th>");
-					htmlcontent.append("<th style = \"border: 1px solid white;\">" + " " + "</th>");
+							"<th style = \"border: 1px solid white;font-weight: normal;\">" + subjobs.get(subindex).getName() + "</th>");
+					htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + " " + "</th>");
 
 					if (subjobs.get(subindex).getStartTime() == null) {
-						htmlcontent.append("<th style = \"border: 1px solid white;\">" + "" + "</th>");
+						htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + "" + "</th>");
 					} else {
-						htmlcontent.append("<th style = \"border: 1px solid white;\">"
+						htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">"
 								+ subjobs.get(subindex).getStartTime() + "</th>");
 					}
 
 					if (subjobs.get(subindex).getEndTime() == null) {
-						htmlcontent.append("<th style = \"border: 1px solid white;\">" + "" + "</th>");
+						htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + "" + "</th>");
 					} else {
-						htmlcontent.append("<th style = \"border: 1px solid white;\">"
+						htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">"
 								+ subjobs.get(subindex).getEndTime() + "</th>");
 					}
 
@@ -774,7 +778,7 @@ public class Main {
 						Period p = new Period(d1, d2);
 
 						htmlcontent.append(
-								"<th style = \"border: 1px solid white;\">" + p.toString(new PeriodFormatterBuilder()
+								"<th style = \"border: 1px solid white;font-weight: normal;\">" + p.toString(new PeriodFormatterBuilder()
 
 										.appendHours().appendSuffix("h").printZeroIfSupported().appendSeparator(":")
 										.appendMinutes().appendSuffix("m").printZeroIfSupported()
@@ -784,7 +788,7 @@ public class Main {
 					}
 
 					else {
-						htmlcontent.append("<th style = \"border: 1px solid white;\">" + "N/A" + "</th>");
+						htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + "N/A" + "</th>");
 					}
 					/*
 					 * }
@@ -808,17 +812,17 @@ public class Main {
 					if (subjobs.get(subindex).getStatus() != null) {
 
 						if (subjobs.get(subindex).getStatus().contains(new StringBuilder("FINISH"))) {
-							htmlcontent.append("<th style = \"border: 1px solid white; color:green;\"   bgcolor=\""
+							htmlcontent.append("<th style = \"border: 1px solid white; color:green;font-weight: normal;\"   bgcolor=\""
 									+ color_statusSuccess + "\"> " + "SUCCESS" + "</th>");
 							subjobs.get(subindex).setStatus("SUCCESS");
 						} else {
 							if (subjobs.get(subindex).getStatus().contains(new StringBuilder("RUNN"))) {
-								htmlcontent.append("<th style = \"border: 1px solid white;color:#847d1a;\" bgcolor=\""
+								htmlcontent.append("<th style = \"border: 1px solid white;color:#847d1a;font-weight: normal;\" bgcolor=\""
 										+ color_statusRunning + "\"> " + subjobs.get(subindex).getStatus() + "</th>");
 								subjobs.get(subindex).setStatus("RUNNING");
 
 							} else {
-								htmlcontent.append("<th style = \"border: 1px solid white;color:red;\" bgcolor=\""
+								htmlcontent.append("<th style = \"border: 1px solid white;color:red;font-weight: normal;\" bgcolor=\""
 										+ color_statusFail + "\"> " + subjobs.get(subindex).getStatus() + "</th>");
 								subjobs.get(subindex).setStatus("FAILURE");
 							}
@@ -826,7 +830,7 @@ public class Main {
 						// htmlcontent.append("</tr >");
 					} else {
 
-						htmlcontent.append("<th style = \"border: 1px solid white;color:#847d1a;\" bgcolor=\""
+						htmlcontent.append("<th style = \"border: 1px solid white;color:#847d1a;font-weight: normal;\" bgcolor=\""
 								+ color_statusRunning + "\"> " + "NOT FOUND" + "</th>");
 						subjobs.get(subindex).setStatus("NOT FOUND");
 
@@ -844,26 +848,31 @@ public class Main {
 
 		htmlcontent.append("<th style = \"border: 1px solid white;\">" + "10" + "</th>");
 
-		htmlcontent.append("<th style = \"border: 1px solid white;\">" + "Jump Box" + "</th>");
-		htmlcontent.append("<th style = \"border: 1px solid white;\">" + "Hot Folder" + "</th>");
-		htmlcontent.append("<th style = \"border: 1px solid white;\">" + "7:00" + "</th>");
+		htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + "Jump Box" + "</th>");
+		htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + "Hot Folder" + "</th>");
+		htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + "7:00" + "</th>");
 
-		htmlcontent.append("<th style = \"border: 1px solid white;\">" + "" + "</th>");
+		htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + "" + "</th>");
 
-		htmlcontent.append("<th style = \"border: 1px solid white;\">" + "" + "</th>");
+		htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + "" + "</th>");
 
 		// duration
 
-		htmlcontent.append("<th style = \"border: 1px solid white;\">" + "" + "</th>");
+		htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + "" + "</th>");
+		
+		StringBuilder stuckMessage = new StringBuilder();
+		if (isATSGetStuck) stuckMessage.append("Check /opt/dataload/import foder");
+		if (isHotFolderGetStuck) stuckMessage.append(" Check /opt/dataload/import/master/twm/processing foder");
+		
 
-		if (isATSGetStuck) {
+		if (isATSGetStuck || isHotFolderGetStuck) {
 
-			htmlcontent.append("<th style = \"border: 1px solid white;color:red;\" bgcolor=\"" + color_statusFail
-					+ "\"> " + "FAILURE" + "</th>");
+			htmlcontent.append("<th style = \"border: 1px solid white;color:red;font-weight: normal;\" bgcolor=\"" + color_statusFail
+					+ "\"> " + "FAILURE:"+stuckMessage.toString() + "</th>");
 
 		} else {
 
-			htmlcontent.append("<th style = \"border: 1px solid white;color:green;\" bgcolor=\"" + color_statusSuccess
+			htmlcontent.append("<th style = \"border: 1px solid white;color:green;font-weight: normal;\" bgcolor=\"" + color_statusSuccess
 					+ "\"> " + "SUCCESS" + "</th>");
 
 		}
@@ -871,6 +880,7 @@ public class Main {
 		htmlcontent.append("</table>");
 
 		System.out.println(htmlcontent.toString());
+		accessLog.info(htmlcontent.toString());
 
 		return htmlcontent.toString();
 	}
