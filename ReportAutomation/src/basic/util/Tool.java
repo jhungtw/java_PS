@@ -285,17 +285,21 @@ public class Tool {
 
 	}
 
-	public static String getOutputFilePath(String reportkey, String reportname, String tmpfolder,String extenstion) {
+	public static String getOutputFilePath(String reportkey, String reportname, String tmpfolder, String extenstion) {
 
 		System.out.println("tmpfolder is " + tmpfolder);
 		String report = reportname.trim().replaceAll(" ", "_").replace("/", "Or").toLowerCase();
 
 		StringBuilder sb = new StringBuilder();
-		
-		if (StringUtils.isEmpty(extenstion)) {extenstion="csv";};
+
+		if (StringUtils.isEmpty(extenstion)) {
+			extenstion = "csv";
+		}
+		;
 
 		sb.append(tmpfolder).append("\\").append(reportkey).append("_").append(report).append("_")
-				.append(new SimpleDateFormat("yyyy-MM-dd").format(Calendar.getInstance().getTime())).append(".").append(extenstion);
+				.append(new SimpleDateFormat("yyyy-MM-dd").format(Calendar.getInstance().getTime())).append(".")
+				.append(extenstion);
 
 		return sb.toString();
 	}
@@ -309,7 +313,7 @@ public class Tool {
 		StringBuilder sb = new StringBuilder();
 
 		if (format.contains("[") && format.contains("]")) {
-			String dateFormat = format.substring(format.indexOf("[")+1, format.indexOf("]"));
+			String dateFormat = format.substring(format.indexOf("[") + 1, format.indexOf("]"));
 			String bf_dateformat = format.substring(0, format.indexOf("[") - 1);
 			String af_dateformat = "";
 			if (format.length() > (format.indexOf("]") + 1)) {
@@ -409,8 +413,8 @@ public class Tool {
 
 		// TableColumn col;
 		// ObservableList<String> rows;
-		
-		System.out.println("save file as: "+filepath);
+
+		System.out.println("save file as: " + filepath);
 		StringBuilder dataHeaders = new StringBuilder();
 		StringBuilder dataRow = new StringBuilder();
 		PrintWriter csvWriter = new PrintWriter(new File(filepath));
@@ -428,31 +432,41 @@ public class Tool {
 		for (int i = 0; i < numberOfColumns; i++) {
 
 			if (i == 0) {
-				dataHeaders.append( headers.get(i).toString() );
+				dataHeaders.append(headers.get(i).toString());
 			} else {
-				dataHeaders.append("," + headers.get(i).toString() );
+				dataHeaders.append("," + headers.get(i).toString());
 			}
 
-			//System.out.println("dddd" + headers.get(i).toString() + "pppp");
+			// System.out.println("dddd" + headers.get(i).toString() + "pppp");
 
 		}
 		csvWriter.println(dataHeaders);
 		int j = 0;
+
 		for (ArrayList<String> tmp : rows) {
 			dataRow = new StringBuilder();
+			// for debug
 			//System.out.println("%%%%%  " + tmp.toString());
 			j = 0;
 			for (String cell : tmp) {
 
 				if (j == 0) {
-					dataRow.append(tmp.get(j).toString());
+					if (tmp.get(j) == null) {
+						dataRow.append("");
+					} else {
+						dataRow.append(tmp.get(j).toString());
+					}
 				} else {
-					dataRow.append("," + tmp.get(j).toString());
+					if (tmp.get(j) == null) {
+						dataRow.append(",");
+					} else {
+						dataRow.append("," + tmp.get(j).toString());
+					}
 				}
 
 				j++;
 
-				//System.out.println("XXXXX " + cell.toString());
+				// System.out.println("XXXXX " + cell.toString());
 			}
 			csvWriter.println(dataRow);
 		}
@@ -485,7 +499,7 @@ public class Tool {
 
 		for (int i = 0; i < numberOfColumns; i++) {
 
-			//System.out.println("dddd" + headers.get(i) + "pppp");
+			// System.out.println("dddd" + headers.get(i) + "pppp");
 			row.createCell(i).setCellValue(headers.get(i));
 		}
 
@@ -500,7 +514,7 @@ public class Tool {
 				if (cell == null) {
 					cell = "//NULL";
 				}
-				//System.out.println("YYYYY" + cell.toString());
+				// System.out.println("YYYYY" + cell.toString());
 				// String callstring = new String(cell.toString());
 				row.createCell(j).setCellValue(cell.toString());
 				j++;
@@ -717,7 +731,7 @@ public class Tool {
 				row.add(rs.getString(i));
 			}
 			rows.add(row);
-			//System.out.println("Row [1] added " + row);
+			// System.out.println("Row [1] added " + row);
 
 		}
 
@@ -751,25 +765,26 @@ public class Tool {
 		}
 		System.out.println("Done copy");
 	}
-	public static void copyFilesToFtpFolderOverSSH(String SFTPHOST, String SFTPUSER, String SFTPPASS, String FILETOTRANSFER,
-			String fileName, String SFTPWORKINGDIR) throws Exception {
+
+	public static void copyFilesToFtpFolderOverSSH(String SFTPHOST, String SFTPUSER, String SFTPPASS,
+			String FILETOTRANSFER, String fileName, String SFTPWORKINGDIR) throws Exception {
 		System.out.println("Start copy");
-		com.jcraft.jsch.Session     session     = null;
-		Channel     channel     = null;
+		com.jcraft.jsch.Session session = null;
+		Channel channel = null;
 		ChannelSftp channelSftp = null;
 		JSch jsch = new JSch();
-        session = jsch.getSession(SFTPUSER,SFTPHOST,22);
-        session.setPassword(SFTPPASS);
-        java.util.Properties config = new java.util.Properties();
-        config.put("StrictHostKeyChecking", "no");
-        session.setConfig(config);
-        session.connect();
-        channel = session.openChannel("sftp");
-        channel.connect();
-        channelSftp = (ChannelSftp)channel;
-        channelSftp.cd(SFTPWORKINGDIR);
-        File f = new File(FILETOTRANSFER);
-        channelSftp.put(new FileInputStream(f), f.getName());
+		session = jsch.getSession(SFTPUSER, SFTPHOST, 22);
+		session.setPassword(SFTPPASS);
+		java.util.Properties config = new java.util.Properties();
+		config.put("StrictHostKeyChecking", "no");
+		session.setConfig(config);
+		session.connect();
+		channel = session.openChannel("sftp");
+		channel.connect();
+		channelSftp = (ChannelSftp) channel;
+		channelSftp.cd(SFTPWORKINGDIR);
+		File f = new File(FILETOTRANSFER);
+		channelSftp.put(new FileInputStream(f), f.getName());
 		System.out.println("Done copy");
 	}
 

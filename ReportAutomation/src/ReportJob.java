@@ -65,7 +65,7 @@ public class ReportJob implements Job {
 			switch (data.getString("report.frequency").toUpperCase()) {
 			case "DAILY":
 				System.out.println("daily job");
-				System.out.println("XXXXXX" + new DateTime(dt.getYear(), dt.getMonthOfYear(), 1, 0, 0, 0).minusMonths(1)
+				System.out.println("XXXXXX" + new DateTime(dt.getYear(), dt.getMonthOfYear(), 1, 0, 0, 0).minusDays(1)
 						.toString(DateTimeFormat.forPattern("YYYY-MM-dd")));
 				System.out.println("XXXXXX" + new DateTime(dt.getYear(), dt.getMonthOfYear(), 1, 0, 0, 0)
 						.toString(DateTimeFormat.forPattern("YYYY-MM-dd")));
