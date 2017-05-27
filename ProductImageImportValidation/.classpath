@@ -21,5 +21,6 @@
 	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/lib/hybris-virtualjdbc-5.1.0.0.jar"/>
 	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/lib/virtualjdbcserver_5.6.jar"/>
 	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/lib/vjdbc.jar"/>
+	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/lib/j2html-1.0.0.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

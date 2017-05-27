@@ -66,6 +66,7 @@ public class HybrisDao {
 
 				inApexItems.add(rset.getString("code"));
 			}
+			System.out.println(inApexItems.size());
 		}
 		return (ArrayList<String>) inApexItems;
 	}
@@ -102,6 +103,7 @@ public class HybrisDao {
 
 				inApexItems.add(rset.getString("code"));
 			}
+			System.out.println(inApexItems.size());
 		}
 		return (ArrayList<String>) inApexItems;
 	}

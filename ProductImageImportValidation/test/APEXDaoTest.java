@@ -1,11 +1,18 @@
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+
+import javax.mail.MessagingException;
+import javax.mail.internet.AddressException;
 
 import org.junit.Ignore;
 import org.junit.Test;
+
+import utils.OutputUtils;
 
 public class APEXDaoTest {
 
@@ -133,6 +140,37 @@ public class APEXDaoTest {
 			System.out.println("--> " + tmp);
 
 		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Test
+
+	public void testHTml() {
+		
+		List<String> filesWithWrongFormat = new ArrayList<>();
+		filesWithWrongFormat.add("122423B");
+		filesWithWrongFormat.add("122423A");
+		List<String> filesNotInHybris = new ArrayList<>();
+		filesNotInHybris.add("3454654");
+		filesNotInHybris.add("345461154");
+		List<String> filesNotInApex = new ArrayList<>();
+		filesNotInApex.add("11111111");
+		filesNotInApex.add("34365111");
+		System.out.println(OutputUtils.getHtmlOutput(filesWithWrongFormat,filesNotInHybris,filesNotInApex));
+		
+		try {
+			OutputUtils.sendEmailBySmtp("jhung@totalwine.com", "jhung@totalwine.com", "Validation of product images", OutputUtils.getHtmlOutput(filesWithWrongFormat,filesNotInHybris,filesNotInApex));
+		} catch (AddressException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (MessagingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 	}
 
 }
