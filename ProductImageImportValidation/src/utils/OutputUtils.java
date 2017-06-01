@@ -1,8 +1,8 @@
 package utils;
 
 import static j2html.TagCreator.body;
-import static j2html.TagCreator.h1;
 import static j2html.TagCreator.h2;
+import static j2html.TagCreator.h3;
 import static j2html.TagCreator.li;
 import static j2html.TagCreator.ul;
 
@@ -22,7 +22,9 @@ import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
+
 import j2html.tags.ContainerTag;
+
 
 public class OutputUtils {
 	private OutputUtils() {
@@ -60,9 +62,10 @@ public class OutputUtils {
 		}
 
 		return body()
-				.with(h1("Validation of file name for product image import"),
-						h2("File names with Wrong foramt").with(wrongFormatHtml),
-						h2("Item not in Hybris").with(notInHybrisHtml), h2("Item not in Apex").with(notInApexHtml))
+				.with(h2("Validation of file name for product image import"),
+						h3("File name(s) with wrong format").with(wrongFormatHtml),
+						h3("Image for an Item that is not found in Hybris (image needs to be uploaded once item is in hybris)").with(notInHybrisHtml), 
+						h3("Image for an Item that is not found in Apex").with(notInApexHtml))
 				.render();
 
 	}
@@ -134,5 +137,75 @@ public class OutputUtils {
 		System.out.println("EMail Sent Successfully!!");
 
 	}
+	/*
+	public static void encryptFile( 
+			OutputStream    out, 
+	        String          fileName, 
+	        PGPPublicKey    encKey, 
+	        boolean         armor, 
+	        boolean         withIntegrityCheck) 
+	        throws IOException, NoSuchProviderException 
+	    {     
+	        if (armor) 
+	        { 
+	            out = new ArmoredOutputStream(out); 
+	        } 
+	         
+	        try 
+	        { 
+	            ByteArrayOutputStream       bOut = new ByteArrayOutputStream(); 
+	             
+	     
+	            PGPCompressedDataGenerator  comData = new PGPCompressedDataGenerator( 
+	                                                                    PGPCompressedData.ZIP); 
+	                                                                     
+	            PGPUtil.writeFileToLiteralData(comData.open(bOut), PGPLiteralData.BINARY, new File(fileName)); 
+	             
+	            comData.close(); 
+	            
+	            byte[] keyBytes = new String("12324234").getBytes();
+	            PGPDataEncryptorBuilder builder  = new PGPDataEncryptorBuilder() {
+					
+					@Override
+					public SecureRandom getSecureRandom() {
 
+						return new SecureRandom();
+					}
+					
+					@Override
+					public int getAlgorithm() {
+						return PGPEncryptedData.CAST5;
+					}
+					
+					@Override
+					public PGPDataEncryptor build(byte[] arg0) throws PGPException {
+						// TODO Auto-generated method stub
+						return null;
+					}
+				};
+	            // PGPEncryptedDataGenerator   cPk = new PGPEncryptedDataGenerator(PGPEncryptedData.CAST5, withIntegrityCheck, new SecureRandom(), "BC"); 
+	            PGPEncryptedDataGenerator   cPk = (PGPEncryptedDataGenerator) builder.build(keyBytes);
+
+	            cPk.addMethod(encKey);
+	             
+	            byte[]                bytes = bOut.toByteArray(); 
+	             
+	            OutputStream    cOut = cPk.open(out, bytes.length); 
+	 
+	            cOut.write(bytes); 
+	             
+	            cOut.close(); 
+	 
+	            out.close(); 
+	        } 
+	        catch (PGPException e) 
+	        { 
+	            System.err.println(e); 
+	            if (e.getUnderlyingException() != null) 
+	            { 
+	                e.getUnderlyingException().printStackTrace(); 
+	            } 
+	        } 
+	    } 
+*/
 }
