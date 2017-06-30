@@ -16,6 +16,7 @@ public class Report {
 	private boolean email_notification;
 	private String email_to;
 	private String email_cc;
+	private String email_extracontent;
 	private boolean ftp_notification;
 	private String ftp_host;
 	private String ftp_port;
@@ -101,6 +102,12 @@ public class Report {
 	}
 	public void setEmail_cc(String email_cc) {
 		this.email_cc = email_cc;
+	}
+	public String getEmail_extracontent() {
+		return email_extracontent;
+	}
+	public void setEmail_extracontent(String email_extracontent) {
+		this.email_extracontent = email_extracontent;
 	}
 	public boolean isFtp_notification() {
 		return ftp_notification;

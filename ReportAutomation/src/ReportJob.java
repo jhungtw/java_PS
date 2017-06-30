@@ -37,6 +37,8 @@ public class ReportJob implements Job {
 	}
 
 	public void execute(JobExecutionContext context) throws JobExecutionException {
+		
+		
 		Connection connection = null;
 
 		Statement stmt = null;
@@ -47,6 +49,7 @@ public class ReportJob implements Job {
 		// date and time that it is running
 		JobKey jobKey = context.getJobDetail().getKey();
 		JobDataMap data = context.getMergedJobDataMap();
+		
 		accessLog.info("SimpleJob says: " + jobKey + " executing at " + new Date() + data.getString("query"));
 
 		// new ReportExecution().run(data.getString("query"));
@@ -115,7 +118,8 @@ public class ReportJob implements Job {
 
 			connection = DriverManager.getConnection(HYBRIS_DRIVER_URL, HYBRIS_USER, HYBRIS_PASSWORD);
 
-			stmt = connection.createStatement();
+			stmt = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
+				    ResultSet.CONCUR_READ_ONLY);
 
 			rs = stmt.executeQuery(query);
 
@@ -127,98 +131,106 @@ public class ReportJob implements Job {
 			// generate output file name
 			String filepath = "";
 			System.out.println("output.filename is " + data.getString("output.filename"));
-			;
-			if (StringUtils.isNotEmpty(data.getString("output.filename"))) {
-				if (data.getString("output.format").equalsIgnoreCase("csv")) {
-					filepath = Tool.getOutputFilePathWithFormat(data.getString("output.filename"),
-							data.getString("name"), data.getString("temp.folder"), "csv");
+			boolean EMPTY_RESULTSET = Tool.isResultEmpty(rs);
+			
+			boolean PROCESS_DELIVERY= Tool.processDeliveryActions(EMPTY_RESULTSET, data.getBoolean("return.empty"));
+			System.out.println(data.getBoolean("return.empty") +"///"+!EMPTY_RESULTSET+"///"+PROCESS_DELIVERY);
 
-				}
-				if (data.getString("output.format").equalsIgnoreCase("excel")) {
-					filepath = Tool.getOutputFilePathWithFormat(data.getString("output.filename"),
-							data.getString("name"), data.getString("temp.folder"), "xlsx");
+			if (PROCESS_DELIVERY) {
 
-				}
-			} else {
-				filepath = Tool.getOutputFilePath(data.getString("report.key"), data.getString("report.name"),
-						data.getString("temp.folder"), data.getString("output.format"));
-			}
-			// save as excel or csv
-			switch (data.getString("output.format").toUpperCase()) {
-			case "EXCEL": {
+				if (StringUtils.isNotEmpty(data.getString("output.filename"))) {
+					if (data.getString("output.format").equalsIgnoreCase("csv")) {
+						filepath = Tool.getOutputFilePathWithFormat(data.getString("output.filename"),
+								data.getString("name"), data.getString("temp.folder"), "csv");
 
-				if (data.getBooleanValue("password.protected")) {
-					Tool.saveResultsetToExcelWithPassword(data.getString("report.name"), rs, filepath,
-							data.getString("password"));
-					accessLog.info("Saved output as " + filepath);
+					}
+					if (data.getString("output.format").equalsIgnoreCase("excel")) {
+						filepath = Tool.getOutputFilePathWithFormat(data.getString("output.filename"),
+								data.getString("name"), data.getString("temp.folder"), "xlsx");
 
+					}
 				} else {
-					Tool.saveResultsetToExcel(data.getString("report.name"), rs, filepath);
-					accessLog.info("No password--Saved output as " + filepath);
+					filepath = Tool.getOutputFilePath(data.getString("report.key"), data.getString("report.name"),
+							data.getString("temp.folder"), data.getString("output.format"));
 				}
-				break;
-			}
+				// save as excel or csv
+				switch (data.getString("output.format").toUpperCase()) {
+				case "EXCEL": {
 
-			case "CSV": {
+					if (data.getBooleanValue("password.protected")) {
+						Tool.saveResultsetToExcelWithPassword(data.getString("report.name"), rs, filepath,
+								data.getString("password"));
+						accessLog.info("Saved output as " + filepath);
 
-				Tool.saveResultsetToCSV(rs, filepath);
-				accessLog.info("Save AS CSV--Saved output as " + filepath);
-
-				break;
-			}
-			default:
-
-				break;
-			}
-
-			// send email?
-
-			if (data.getBooleanValue("email.notification")) {
-				Tool.sendEmailByTWMSmtp(data.getString("smtp.user"), data.getString("email.to"),
-						data.getString("email.cc"), data.getString("report.name"), filepath);
-
-				accessLog.info("Send email is done ");
-			}
-
-			// ftp file?
-
-			if (data.getBooleanValue("ftp.notification")) {
-				System.out.println("before ftp: " + data.getString("ftp.host") + "--" + filepath);
-				accessLog.info("ftp is starting ");
-				Path p = Paths.get(filepath);
-				String remotefile = p.getFileName().toString();
-				System.out.println("host:" + data.getString("ftp.host") + "//filepath:" + filepath + "//remotefile:"
-						+ remotefile + "//remotefolder:" + data.getString("ftp.folder"));
-
-				if (data.getString("ftp.port").equalsIgnoreCase("22")) {
-					//ftp over ssh
-					Tool.copyFilesToFtpFolderOverSSH(data.getString("ftp.host"), data.getString("ftp.username"),
-							data.getString("ftp.password"), filepath, remotefile, data.getString("ftp.folder"));
-
-				} else {
-					//normal ftp
-					Tool.copyFilesToFtpFolder(data.getString("ftp.host"), data.getString("ftp.username"),
-							data.getString("ftp.password"), filepath, remotefile, data.getString("ftp.folder"));
-
+					} else {
+						Tool.saveResultsetToExcel(data.getString("report.name"), rs, filepath);
+						accessLog.info("No password--Saved output as " + filepath);
+					}
+					break;
 				}
 
-				accessLog.info("ftp is done ");
-			}
+				case "CSV": {
 
-			// backup file?
+					Tool.saveResultsetToCSV(rs, filepath);
+					accessLog.info("Save AS CSV--Saved output as " + filepath);
 
-			if (data.getBooleanValue("backup.notification")) {
-				System.out.println("before backup: " + data.getString("ftp.host") + "--" + filepath);
-				accessLog.info("backup is starting ");
-				File source = new File(filepath);
+					break;
+				}
+				default:
 
-				Path p = Paths.get(filepath);
-				String remotefile = p.getFileName().toString();
-				System.out.println("--->" + data.getString("backup.folder") + "\\" + remotefile);
-				File dest = new File(data.getString("backup.folder") + "\\" + remotefile);
-				FileUtils.copyFile(source, dest);
+					break;
+				}
 
-				accessLog.info("backup is done ");
+				// send email?
+
+				if (data.getBooleanValue("email.notification")) {
+					Tool.sendEmailByTWMSmtp(data.getString("smtp.user"), data.getString("email.to"),
+							data.getString("email.cc"), data.getString("email.extracontent"),data.getString("report.name"), filepath);
+
+					accessLog.info("Send email is done ");
+				}
+
+				// ftp file?
+
+				if (data.getBooleanValue("ftp.notification")) {
+					System.out.println("before ftp: " + data.getString("ftp.host") + "--" + filepath);
+					accessLog.info("ftp is starting ");
+					Path p = Paths.get(filepath);
+					String remotefile = p.getFileName().toString();
+					System.out.println("host:" + data.getString("ftp.host") + "//filepath:" + filepath + "//remotefile:"
+							+ remotefile + "//remotefolder:" + data.getString("ftp.folder"));
+
+					if (data.getString("ftp.port").equalsIgnoreCase("22")) {
+						// ftp over ssh
+						Tool.copyFilesToFtpFolderOverSSH(data.getString("ftp.host"), data.getString("ftp.username"),
+								data.getString("ftp.password"), filepath, remotefile, data.getString("ftp.folder"));
+
+					} else {
+						// normal ftp
+						Tool.copyFilesToFtpFolder(data.getString("ftp.host"), data.getString("ftp.username"),
+								data.getString("ftp.password"), filepath, remotefile, data.getString("ftp.folder"));
+
+					}
+
+					accessLog.info("ftp is done ");
+				}
+
+				// backup file?
+
+				if (data.getBooleanValue("backup.notification")) {
+					System.out.println("before backup: " + data.getString("ftp.host") + "--" + filepath);
+					accessLog.info("backup is starting ");
+					File source = new File(filepath);
+
+					Path p = Paths.get(filepath);
+					String remotefile = p.getFileName().toString();
+					System.out.println("--->" + data.getString("backup.folder") + "\\" + remotefile);
+					File dest = new File(data.getString("backup.folder") + "\\" + remotefile);
+					FileUtils.copyFile(source, dest);
+
+					accessLog.info("backup is done ");
+				}
+
 			}
 
 		} catch (Exception e) {
@@ -236,21 +248,18 @@ public class ReportJob implements Job {
 				try {
 					rs.close();
 				} catch (SQLException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			if (stmt != null)
 				try {
 					stmt.close();
 				} catch (SQLException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			if (connection != null)
 				try {
 					connection.close();
 				} catch (SQLException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 

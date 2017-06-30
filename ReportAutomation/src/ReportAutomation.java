@@ -46,8 +46,6 @@ public class ReportAutomation {
 	static String production_mode;
 	static final String progressfilename = "progress.txt";
 
-
-
 	public void run() throws Exception {
 
 		accessLog.info("------- Initializing -------------------");
@@ -56,7 +54,7 @@ public class ReportAutomation {
 		SchedulerFactory sf = new StdSchedulerFactory();
 		Scheduler sched = sf.getScheduler();
 
-		//accessLog.info("------- Initialization Complete --------");
+		// accessLog.info("------- Initialization Complete --------");
 
 		accessLog.info("------- Scheduling Jobs ----------------");
 
@@ -87,21 +85,25 @@ public class ReportAutomation {
 					System.out.println(reports.get(entry).getName() + " is enabled");
 					job = setJobDetail(entry, reports.get(entry));
 					Trigger trigger = null;
-					/* disable cron scheduling
-					if (configs.get("exec.strategy").equalsIgnoreCase(ExecutionStrategy.CRON_EXPRESSION.toString())) {
-
-						trigger = (CronTrigger) newTrigger().withIdentity("trigger" + numberOfReport, "group1")
-								.withSchedule(cronSchedule(reports.get(entry).getSchedule())).build();
-						sched.scheduleJob(job, trigger);
-						accessLog.info(job.getKey() + " has been scheduled to run at and repeat based on expression: "
-								+ ((CronTrigger) trigger).getCronExpression());
-					}
-					*/
+					/*
+					 * disable cron scheduling if
+					 * (configs.get("exec.strategy").equalsIgnoreCase(
+					 * ExecutionStrategy.CRON_EXPRESSION.toString())) {
+					 * 
+					 * trigger = (CronTrigger)
+					 * newTrigger().withIdentity("trigger" + numberOfReport,
+					 * "group1")
+					 * .withSchedule(cronSchedule(reports.get(entry).getSchedule
+					 * ())).build(); sched.scheduleJob(job, trigger);
+					 * accessLog.info(job.getKey() +
+					 * " has been scheduled to run at and repeat based on expression: "
+					 * + ((CronTrigger) trigger).getCronExpression()); }
+					 */
 
 					if (configs.get("exec.strategy").equalsIgnoreCase(ExecutionStrategy.FIXED_INTERVAL.toString())) {
 						System.out.println("Before adding interval: Time is " + now.getTime().toString());
 
-						now.add(Calendar.SECOND, (Integer.parseInt(configs.get("exec.interval")) ));
+						now.add(Calendar.SECOND, (Integer.parseInt(configs.get("exec.interval"))));
 
 						System.out.println("Before generate Trigger: Time is " + now.getTime().toString());
 						trigger = (SimpleTrigger) newTrigger().withIdentity("trigger" + numberOfReport, "group1")
@@ -158,8 +160,8 @@ public class ReportAutomation {
 
 		accessLog.info("------- Started Scheduler -----------------");
 
-		accessLog.info("------- Waiting "+(Integer.parseInt(configs.get("exec.interval"))* numberOfReport +300)/60+" minutes... ------------");
-		
+		accessLog.info("------- Waiting " + (Integer.parseInt(configs.get("exec.interval")) * numberOfReport + 300) / 60
+				+ " minutes... ------------");
 
 		try
 
@@ -173,7 +175,7 @@ public class ReportAutomation {
 						Math.abs(now.getTimeInMillis() - Calendar.getInstance().getTimeInMillis()) + 5L * 60L * 1000L);
 
 			} else {
-				Thread.sleep((Integer.parseInt(configs.get("exec.interval"))* numberOfReport +300) * 60L * 1000L);
+				Thread.sleep((Integer.parseInt(configs.get("exec.interval")) * numberOfReport + 300) * 60L * 1000L);
 			}
 
 			// executing...
@@ -201,10 +203,8 @@ public class ReportAutomation {
 		accessLog = Logger.getLogger("ReportAutomationLog");
 		accessLog.setLevel(Level.INFO);
 
-
-
 		// Disable reports not in right schedule
-	
+
 		if (production_mode.equalsIgnoreCase("enabled")) {
 			reports = Tool.disableIrrelevantReports(reports);
 		}
@@ -216,7 +216,7 @@ public class ReportAutomation {
 		}
 
 		accessLog.info("Disable reports not in right schedule is done");
-        // When enabled report exists, run reportautomation
+		// When enabled report exists, run reportautomation
 		if (exeflag) {
 			accessLog.info("Starting report automation program");
 			ReportAutomation ra = new ReportAutomation();
@@ -285,22 +285,20 @@ public class ReportAutomation {
 
 	private static JobDetail setJobDetail(String entry, Report report) {
 		JobDetail jd = null;
-
 		if (production_mode.equalsIgnoreCase("enabled")) {
 			jd = newJob(ReportJob.class).withIdentity(entry, "group1")
 					.usingJobData("name", reports.get(entry).getName())
 					.usingJobData("query", reports.get(entry).getContent())
-					
-					.usingJobData("hybris.user", hybris_user)
-					.usingJobData("hybris.password", hybris_pass)
-					.usingJobData("smtp.user", smtp_user)
-					.usingJobData("smtp.password", smtp_password)
+
+					.usingJobData("hybris.user", hybris_user).usingJobData("hybris.password", hybris_pass)
+					.usingJobData("smtp.user", smtp_user).usingJobData("smtp.password", smtp_password)
 					.usingJobData("output.format", reports.get(entry).getOutput_format())
 					.usingJobData("output.filename", reports.get(entry).getOutput_filename())
 					.usingJobData("password.protected", reports.get(entry).isPassword_protected())
 					.usingJobData("password", reports.get(entry).getPassword())
 					.usingJobData("email.notification", reports.get(entry).isEmail_notification())
 					.usingJobData("email.to", reports.get(entry).getEmail_to())
+					.usingJobData("email.extracontent", reports.get(entry).getEmail_extracontent())
 					.usingJobData("email.cc", reports.get(entry).getEmail_cc())
 					.usingJobData("ftp.notification", reports.get(entry).isFtp_notification())
 					.usingJobData("ftp.host", reports.get(entry).getFtp_host())
@@ -314,21 +312,21 @@ public class ReportAutomation {
 					.usingJobData("temp.folder", configs.get("temp.folder"))
 					.usingJobData("email.test", configs.get("email.test"))
 					.usingJobData("hybris.env", configs.get("hybris.env"))
-					.usingJobData("report.frequency", reports.get(entry).getFrequency()).build();
+					.usingJobData("report.frequency", reports.get(entry).getFrequency())
+					.usingJobData("return.empty", configs.get("return.empty"))
+
+					.build();
 		} else {
 			jd = newJob(ReportJob.class).withIdentity(entry, "group1")
 					.usingJobData("name", reports.get(entry).getName())
 					.usingJobData("query", reports.get(entry).getContent()).usingJobData("hybris.user", hybris_user)
-					.usingJobData("hybris.password", hybris_pass)
-					.usingJobData("smtp.user", smtp_user)
+					.usingJobData("hybris.password", hybris_pass).usingJobData("smtp.user", smtp_user)
 					.usingJobData("smtp.password", smtp_password)
 					.usingJobData("output.format", reports.get(entry).getOutput_format())
 					.usingJobData("output.filename", reports.get(entry).getOutput_filename())
 					.usingJobData("email.to", configs.get("email.test"))
-					.usingJobData("email.cc", configs.get("email.test"))
-					.usingJobData("email.notification", "true")
-					.usingJobData("ftp.notification", "false")
-					.usingJobData("backup.notification", "false")
+					.usingJobData("email.cc", configs.get("email.test")).usingJobData("email.notification", "true")
+					.usingJobData("ftp.notification", "false").usingJobData("backup.notification", "false")
 					.usingJobData("password.protected", reports.get(entry).isPassword_protected())
 					.usingJobData("password", reports.get(entry).getPassword())
 					.usingJobData("report.name", reports.get(entry).getName()).usingJobData("report.key", entry)

@@ -38,7 +38,7 @@ public class ToolTestCase {
 	public void testSMTP() {
 
 		Tool.sendEmailByTWMSmtp("jhung@totalwine.com", "jhung@totalwine.com,jerry110160@gmail.com",
-				"jhung@totalwine.com,jerry110160@gmail.com", "XXX", "c:\\tmp\\testyaml");
+				"jhung@totalwine.com,jerry110160@gmail.com", "ssss","XXX", "c:\\tmp\\testyaml");
 	}
 
 	@Test

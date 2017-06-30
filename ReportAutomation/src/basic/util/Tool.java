@@ -107,6 +107,37 @@ public class Tool {
 
 	}
 
+	public static boolean isResultEmpty(ResultSet rs) throws Exception {
+
+		if (!rs.next()) {
+
+			rs.beforeFirst();
+
+			return true;
+		} else {
+			return false;
+		}
+
+	}
+
+	private static void checkResultSet(ResultSet rs) throws SQLException {
+
+		while (rs.next()) {
+			System.out.println(rs.getString(1) + "---" + rs.getString(2));
+		}
+		rs.beforeFirst();
+	}
+
+	public static boolean processDeliveryActions(boolean isResultSetEmpty, boolean returnEmpty) throws SQLException {
+
+		if (!returnEmpty && isResultSetEmpty) {
+			return false;
+		} else {
+			return true;
+		}
+
+	}
+
 	public static Map<String, Report> disableIrrelevantReports(Map<String, Report> reports) {
 
 		DateTime dt = new DateTime();
@@ -414,6 +445,9 @@ public class Tool {
 		// TableColumn col;
 		// ObservableList<String> rows;
 
+		if (!rs.isBeforeFirst()) {
+			rs.beforeFirst();
+		}
 		System.out.println("save file as: " + filepath);
 		StringBuilder dataHeaders = new StringBuilder();
 		StringBuilder dataRow = new StringBuilder();
@@ -446,7 +480,7 @@ public class Tool {
 		for (ArrayList<String> tmp : rows) {
 			dataRow = new StringBuilder();
 			// for debug
-			//System.out.println("%%%%%  " + tmp.toString());
+			// System.out.println("%%%%% " + tmp.toString());
 			j = 0;
 			for (String cell : tmp) {
 
@@ -469,6 +503,7 @@ public class Tool {
 				// System.out.println("XXXXX " + cell.toString());
 			}
 			csvWriter.println(dataRow);
+
 		}
 
 		csvWriter.close();
@@ -788,8 +823,8 @@ public class Tool {
 		System.out.println("Done copy");
 	}
 
-	public static void sendEmailByTWMSmtp(String emailuser, String emailto, String emailcc, String reportname,
-			String filepath) {
+	public static void sendEmailByTWMSmtp(String emailuser, String emailto, String emailcc, String extraContent,
+			String reportname, String filepath) {
 		try {
 
 			Properties props = System.getProperties();
@@ -816,9 +851,11 @@ public class Tool {
 			BodyPart messageBodyPart = new MimeBodyPart();
 
 			// Now set the actual message
-
-			messageBodyPart.setContent("<h3>Please check the attached for report " + reportname + "</h3><br>",
-					"text/html");
+			StringBuilder contentBuilder = new StringBuilder();
+			contentBuilder.append("<h3>Please check the attached for report ").append(reportname).append("</h3><br>");
+			if(null != extraContent)		
+				contentBuilder.append(extraContent);
+			messageBodyPart.setContent(contentBuilder.toString(), "text/html");
 
 			// Create a multipar message
 			Multipart multipart = new MimeMultipart();
