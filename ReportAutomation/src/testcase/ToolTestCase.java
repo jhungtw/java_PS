@@ -20,6 +20,9 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import basic.config.Report;
+import basic.util.EmailUtils;
+import basic.util.FileTransferUtils;
+import basic.util.JDBCUtils;
 import basic.util.Tool;
 import net.lingala.zip4j.exception.ZipException;
 
@@ -37,7 +40,7 @@ public class ToolTestCase {
 	@Ignore
 	public void testSMTP() {
 
-		Tool.sendEmailByTWMSmtp("jhung@totalwine.com", "jhung@totalwine.com,jerry110160@gmail.com",
+		EmailUtils.sendEmailByTWMSmtp("jhung@totalwine.com", "jhung@totalwine.com,jerry110160@gmail.com",
 				"jhung@totalwine.com,jerry110160@gmail.com", "ssss","XXX", "c:\\tmp\\testyaml");
 	}
 
@@ -68,7 +71,7 @@ public class ToolTestCase {
 
 		
 		try {
-			Tool.saveResultsetToCSV(rs, "c:\\tmp\\ddd.csv");
+			JDBCUtils.saveResultsetToCSV(rs, "c:\\tmp\\ddd.csv");
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -83,7 +86,7 @@ public class ToolTestCase {
 
 	public void testCopyFiles() throws ZipException {
 		try {
-			Tool.copyFilesToFtpFolder("ftp.totalwine.com", "jhung", "Hhj050460@", "c:\\tmp\\psteam2017-03-03.csv", "psteam2017-03-03.csv",
+			FileTransferUtils.copyFilesToFtpFolder("ftp.totalwine.com", "jhung", "Hhj050460@", "c:\\tmp\\psteam2017-03-03.csv", "psteam2017-03-03.csv",
 					"/jerrytmp/");
 
 		} catch (Exception e) {
@@ -193,7 +196,7 @@ public class ToolTestCase {
 	@Test
 	@Ignore
 	public void testAddQueryInterval() {
-		System.out.println("testAddQueryInterval: " + Tool.addQueryInterval(
+		System.out.println("testAddQueryInterval: " + JDBCUtils.addQueryInterval(
 				"select count(*) from {twmcustomer} where {creationtime} > '[from]' and {creationtime} < '[to]'",
 				Tool.getFirstDayOfLastWeek("YYYY-MM-dd"), Tool.getFirstDayOfThisWeek("YYYY-MM-dd")));
 		fail("Not yet implemented");

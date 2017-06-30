@@ -23,6 +23,9 @@ import java.util.Date;
 
 import org.quartz.JobKey;
 
+import basic.util.EmailUtils;
+import basic.util.FileTransferUtils;
+import basic.util.JDBCUtils;
 import basic.util.Tool;
 
 public class ReportJob implements Job {
@@ -57,7 +60,7 @@ public class ReportJob implements Job {
 		try {
 			String HYBRIS_DRIVER_CLASS = "de.hybris.vjdbc.VirtualDriver";
 
-			String HYBRIS_DRIVER_URL = Tool.getHybrisDriverURL(data.getString("hybris.env"));
+			String HYBRIS_DRIVER_URL = JDBCUtils.getHybrisDriverURL(data.getString("hybris.env"));
 
 			String HYBRIS_USER = data.getString("hybris.user");
 
@@ -73,7 +76,7 @@ public class ReportJob implements Job {
 				System.out.println("XXXXXX" + new DateTime(dt.getYear(), dt.getMonthOfYear(), 1, 0, 0, 0)
 						.toString(DateTimeFormat.forPattern("YYYY-MM-dd")));
 
-				query = Tool.addQueryInterval(data.getString("query"),
+				query = JDBCUtils.addQueryInterval(data.getString("query"),
 						new DateTime(dt.getYear(), dt.getMonthOfYear(), dt.getDayOfMonth(), 0, 0, 0).minusDays(1)
 								.toString(DateTimeFormat.forPattern("YYYY-MM-dd")),
 						new DateTime(dt.getYear(), dt.getMonthOfYear(), dt.getDayOfMonth(), 0, 0, 0)
@@ -86,14 +89,14 @@ public class ReportJob implements Job {
 				System.out.println("XXXXXX" + new DateTime(dt.getYear(), dt.getMonthOfYear(), 1, 0, 0, 0)
 						.toString(DateTimeFormat.forPattern("YYYY-MM-dd")));
 
-				query = Tool.addQueryInterval(data.getString("query"),
+				query = JDBCUtils.addQueryInterval(data.getString("query"),
 						new DateTime(dt.getYear(), dt.getMonthOfYear(), 1, 0, 0, 0).minusMonths(1)
 								.toString(DateTimeFormat.forPattern("YYYY-MM-dd")),
 						new DateTime(dt.getYear(), dt.getMonthOfYear(), 1, 0, 0, 0)
 								.toString(DateTimeFormat.forPattern("YYYY-MM-dd")));
 				break;
 			case "WEEK":
-				query = Tool.addQueryInterval(data.getString("query"),
+				query = JDBCUtils.addQueryInterval(data.getString("query"),
 						new DateTime().minusDays(7).toString(DateTimeFormat.forPattern("YYYY-MM-dd")),
 						new DateTime().toString(DateTimeFormat.forPattern("YYYY-MM-dd")));
 				// need fix
@@ -158,12 +161,12 @@ public class ReportJob implements Job {
 				case "EXCEL": {
 
 					if (data.getBooleanValue("password.protected")) {
-						Tool.saveResultsetToExcelWithPassword(data.getString("report.name"), rs, filepath,
+						JDBCUtils.saveResultsetToExcelWithPassword(data.getString("report.name"), rs, filepath,
 								data.getString("password"));
 						accessLog.info("Saved output as " + filepath);
 
 					} else {
-						Tool.saveResultsetToExcel(data.getString("report.name"), rs, filepath);
+						JDBCUtils.saveResultsetToExcel(data.getString("report.name"), rs, filepath);
 						accessLog.info("No password--Saved output as " + filepath);
 					}
 					break;
@@ -171,7 +174,7 @@ public class ReportJob implements Job {
 
 				case "CSV": {
 
-					Tool.saveResultsetToCSV(rs, filepath);
+					JDBCUtils.saveResultsetToCSV(rs, filepath);
 					accessLog.info("Save AS CSV--Saved output as " + filepath);
 
 					break;
@@ -184,7 +187,7 @@ public class ReportJob implements Job {
 				// send email?
 
 				if (data.getBooleanValue("email.notification")) {
-					Tool.sendEmailByTWMSmtp(data.getString("smtp.user"), data.getString("email.to"),
+					EmailUtils.sendEmailByTWMSmtp(data.getString("smtp.user"), data.getString("email.to"),
 							data.getString("email.cc"), data.getString("email.extracontent"),data.getString("report.name"), filepath);
 
 					accessLog.info("Send email is done ");
@@ -202,12 +205,12 @@ public class ReportJob implements Job {
 
 					if (data.getString("ftp.port").equalsIgnoreCase("22")) {
 						// ftp over ssh
-						Tool.copyFilesToFtpFolderOverSSH(data.getString("ftp.host"), data.getString("ftp.username"),
+						FileTransferUtils.copyFilesToFtpFolderOverSSH(data.getString("ftp.host"), data.getString("ftp.username"),
 								data.getString("ftp.password"), filepath, remotefile, data.getString("ftp.folder"));
 
 					} else {
 						// normal ftp
-						Tool.copyFilesToFtpFolder(data.getString("ftp.host"), data.getString("ftp.username"),
+						FileTransferUtils.copyFilesToFtpFolder(data.getString("ftp.host"), data.getString("ftp.username"),
 								data.getString("ftp.password"), filepath, remotefile, data.getString("ftp.folder"));
 
 					}

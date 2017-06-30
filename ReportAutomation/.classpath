@@ -6,7 +6,6 @@
 			<attribute name="maven.pomderived" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/MgtTool-jsf/WebContent/WEB-INF/lib/vjdbc.jar"/>
 	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/lib/snakeyaml-1.17.jar"/>
 	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/lib/log4j-1.2.16.jar"/>
 	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/lib/quartz-2.2.1.jar"/>
@@ -26,5 +25,6 @@
 	</classpathentry>
 	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/lib/mysql-connector-java-5.1.40.jar"/>
 	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/lib/commons-lang3-3.4.jar"/>
+	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/lib/vjdbc.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>
