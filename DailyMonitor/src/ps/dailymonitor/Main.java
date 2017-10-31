@@ -65,6 +65,7 @@ import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.PeriodFormatter;
 import org.joda.time.format.PeriodFormatterBuilder;
+import org.junit.experimental.theories.Theories;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 import org.yaml.snakeyaml.Yaml;
@@ -82,11 +83,15 @@ import ps.config.Job;
 import ps.config.JobExeStatus;
 
 public class Main {
+	private static final String PROCESS_FOLDER_PATH = "/opt/dataload/import/master/twm/processing";
+	private static final String ATS_FOLDER_PATH = "/opt/dataload/import/";
+	private static final String HOT_FOLDER_PATH = "/opt/dataload/import/master/twm/";
 	private static Logger accessLog;
 	private static Map<Integer, Job> reports = new HashMap<Integer, Job>();
 	private static Map<String, String> configs = new HashMap<String, String>();
 	private static boolean isATSGetStuck;
 	private static boolean isHotFolderGetStuck;
+	private static boolean isHotFolderGetJammed;
 	private static String dateFormat = "MM/dd/yyyy HH:mm:ss";
 	private static String color_headerBG = "#1D72D1";
 	private static String color_cellLight = "#cfdef7";
@@ -98,8 +103,9 @@ public class Main {
 	public static void main(String[] args) {
 
 		try {
+			System.out.println("11112");
 			readConfig();
-
+			System.out.println("11113");
 			initLogger();
 
 			accessLog = Logger.getLogger("DailyMonitorLog");
@@ -111,14 +117,18 @@ public class Main {
 				System.out.println("Starting Daily monitor report");
 				accessLog.info("Starting Daily monitor report");
 
-				isATSGetStuck = isHotFolderGetStuck("/opt/dataload/import/");
+				isATSGetStuck = isHotFolderGetStuck(ATS_FOLDER_PATH);
 				accessLog.info("Get ATS stuck status is done");
-				
-				isHotFolderGetStuck= isHotFolderGetStuck("/opt/dataload/import/master/twm/processing");
+
+				isHotFolderGetStuck = isHotFolderGetStuck(PROCESS_FOLDER_PATH);
 				accessLog.info("Get hot folder stuck status is done");
+
+				isHotFolderGetJammed = isHotFolderJammed(HOT_FOLDER_PATH);
+				accessLog.info("Get hot folder jammed status is done");
 
 				getCloverJobStatus();
 				accessLog.info("Get clover jobs's status is done");
+
 				getHybrisJobStatus();
 				accessLog.info("Get Hybris jobs's status is done");
 				DateTime dt = new DateTime();
@@ -137,7 +147,6 @@ public class Main {
 
 			}
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			accessLog.info("Exception detail: ", e);
 			e.printStackTrace();
 
@@ -159,7 +168,7 @@ public class Main {
 		appender.activateOptions();
 		Logger.getRootLogger().addAppender(appender);
 		Logger.getRootLogger().setLevel(Level.INFO);
-		//System.out.println("2222");
+		// System.out.println("2222");
 
 		// Logger.getRootLogger().addAppender(cappender);
 
@@ -167,13 +176,15 @@ public class Main {
 
 	private static void readConfig() throws FileNotFoundException {
 
-		FileReader reader = new FileReader(new File("c:\\tmp\\dailymonitor.properties"));
-		Yaml yaml = new Yaml();
-		MapBean parsed = yaml.loadAs(reader, MapBean.class);
+		FileReader reader = new FileReader(new File("c:\\tmp\\dailymonitornew.properties"));
 
+		Yaml yaml = new Yaml();
+		System.out.println("11111");
+		MapBean parsed = yaml.loadAs(reader, MapBean.class);
+		System.out.println("11111");
 		reports = parsed.getReports();
 		configs = parsed.getConfigrations();
-
+		System.out.println("11111");
 		for (String index : configs.keySet()) {
 			System.out.println("Key : " + index + " Value : " + configs.get(index).toString());
 
@@ -191,7 +202,8 @@ public class Main {
 
 		// String HYBRIS_DRIVER_URL =
 		// "jdbc:hybris:flexiblesearch:http://backoffice.totalwine.com/virtualjdbc/service";
-		String HYBRIS_DRIVER_URL = "jdbc:hybris:flexiblesearch:http://172.24.40.119:9001/virtualjdbc/service";
+		String HYBRIS_DRIVER_URL = "jdbc:hybris:flexiblesearch:http://172.24.41.152:9001/virtualjdbc/service";
+
 		DateTime now = new DateTime();
 		DateTime dt;
 		dt = new DateTime(now.getYear(), now.getMonthOfYear(), now.getDayOfMonth(), 0, 0, 0, 0);
@@ -213,6 +225,8 @@ public class Main {
 
 		Connection connection = DriverManager.getConnection(HYBRIS_DRIVER_URL, "jhung", "hhj1101");
 
+		// for test
+		displayConnectionInfo(connection);
 		ResultSet rs = new SearchDAO().FlexableQuery(connection, FQSB.toString());
 		ArrayList<HybrisJob> jobruns = new ArrayList<HybrisJob>();
 		while (rs.next()) {
@@ -254,7 +268,7 @@ public class Main {
 		String onlineindexquery = "SELECT  {c.code} AS Jobcode, {j.code} AS Jobname, {s.code} AS 'Current Status', {c.starttime} AS 'Start Time', {c.endtime} AS 'End Time', {r.code} AS 'Last Result' "
 				+ " FROM  {  Cronjob AS c    JOIN CronJobStatus AS s ON {s.pk} = {c.status}   JOIN CronJobResult AS r ON {r.pk} = {c.result}   JOIN Job AS j ON {j.pk} = {c.job} } "
 				+ " WHERE ({c.starttime} >= '" + dt.toString(DateTimeFormat.forPattern("yyyy-MM-dd"))
-				+ " 5:55:00'  AND     {c.code} IN('online_delete-twmIndex-cronjob','online_update-twmIndex-cronjob','TWM-Online-IndexingCompositeJob')"
+				+ " 4:00:00'  AND     {c.code} IN('online_delete-twmIndex-cronjob','online_update-twmIndex-cronjob','TWM-Online-IndexingCompositeJob')"
 				+ "    ) " + "order by {c.starttime} ,SUBSTR( {j.code},1,1)";
 
 		rs = new SearchDAO().FlexableQuery(connection, onlineindexquery);
@@ -361,10 +375,10 @@ public class Main {
 		String tmp1 = dt.toString(DateTimeFormat.forPattern("yyyy-MM-dd"));
 		String tmp2 = dt.minusDays(1).toString(DateTimeFormat.forPattern("yyyy-MM-dd"));
 
-		System.out.println("cd "+hotFolderPath +" && ls -ltr --full-time *ats* | grep -e '" + tmp1 + "' -e '" + tmp2
+		System.out.println("cd " + hotFolderPath + " && ls -ltr --full-time *ats* | grep -e '" + tmp1 + "' -e '" + tmp2
 				+ "' | wc -l");
 
-		((ChannelExec) channel).setCommand("cd "+hotFolderPath +" && ls -ltr --full-time *ats* | grep -e '" + tmp1
+		((ChannelExec) channel).setCommand("cd " + hotFolderPath + " && ls -ltr --full-time *ats* | grep -e '" + tmp1
 				+ "' -e '" + tmp2 + "' | wc -l");
 
 		InputStream commandOutput = channel.getInputStream();
@@ -384,6 +398,64 @@ public class Main {
 		channel.disconnect();
 		System.out.println("isStuck:  " + isStuck);
 		return isStuck;
+
+	}
+
+	// Check traffic jam under /opt/dataload/import/master/twm
+	private static boolean isHotFolderJammed(String hotFolderPath) throws JSchException, IOException {
+
+		String user = configs.get("hotfolder.ssh.user");
+		String ip = configs.get("hotfolder.ip");
+		String password = configs.get("hotfolder.ssh.password");
+
+		boolean isJammed = false;
+
+		JSch jsch = new JSch();
+		Properties config = new Properties();
+		config.put("StrictHostKeyChecking", "no");
+		config.put("compression.s2c", "zlib,none");
+		config.put("compression.c2s", "zlib,none");
+
+		com.jcraft.jsch.Session session = jsch.getSession(user, ip);
+		session.setConfig(config);
+		session.setPort(22);
+		session.setPassword(password);
+		session.connect();
+		// /opt/dataload/import
+		StringBuilder outputBuffer = new StringBuilder();
+		Channel channel = session.openChannel("exec");
+
+		
+		System.out.println("cd "+hotFolderPath+" && ls -ltr --time-style=long-iso *.log | head -1 | awk '{print $6\" \"$7}' ");
+
+		((ChannelExec) channel).setCommand("cd "+hotFolderPath+" && ls -ltr --time-style=long-iso *.log | head -1 | awk '{print $6\" \"$7}' ");
+
+		InputStream commandOutput = channel.getInputStream();
+		channel.connect();
+		int readByte = commandOutput.read();
+
+		while (readByte != 0xffffffff) {
+			outputBuffer.append((char) readByte);
+			readByte = commandOutput.read();
+		}
+		System.out.println("result: "+outputBuffer.toString().trim());
+		
+		if (outputBuffer.toString().trim().length() >0) {
+			DateTimeFormatter f = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm");
+			DateTime lastdt = f.parseDateTime(outputBuffer.toString().trim());
+			
+			DateTime nowdt = new DateTime();
+			long diff = nowdt.getMillis() - lastdt.getMillis();
+			System.out.println(lastdt + "///"+nowdt+"///"+diff);
+			// Check 20 mins delay
+			if (diff > 20)
+				isJammed = true;
+		}
+		;
+
+		channel.disconnect();
+		System.out.println("isJammed:  " + isJammed);
+		return isJammed;
 
 	}
 
@@ -434,7 +506,7 @@ public class Main {
 					dt = new DateTime(now.getYear(), now.getMonthOfYear(), now.getDayOfMonth(),
 							localTime.getHourOfDay(), localTime.getMinuteOfHour(), 0, 0);
 				} else {
-					now= now.minusDays(1);
+					now = now.minusDays(1);
 					dt = new DateTime(now.getYear(), now.getMonthOfYear(), now.getDayOfMonth(),
 							localTime.getHourOfDay(), localTime.getMinuteOfHour(), 0, 0);
 				}
@@ -501,7 +573,7 @@ public class Main {
 
 					System.out.println("----------------------------------------");
 					System.out.println("->>>>>>>>  " + reports.get(entry).toString());
-					accessLog.info("==> "+reports.get(entry).toString());
+					accessLog.info("==> " + reports.get(entry).toString());
 
 					System.out.println("----------------------------------------");
 				} else {
@@ -647,24 +719,25 @@ public class Main {
 			}
 			htmlcontent.append("<th style = \"border: 1px solid white;\">" + entry + "</th>");
 
-			htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + reports.get(entry).getType() + "</th>");
-			htmlcontent.append(
-					"<th style = \"border: 1px solid white;font-weight: normal;\">" + reports.get(entry).getDisplayname() + "</th>");
-			htmlcontent
-					.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + reports.get(entry).getScheduled() + "</th>");
+			htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">"
+					+ reports.get(entry).getType() + "</th>");
+			htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">"
+					+ reports.get(entry).getDisplayname() + "</th>");
+			htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">"
+					+ reports.get(entry).getScheduled() + "</th>");
 
 			if (reports.get(entry).getStartTime() == null) {
 				htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + "" + "</th>");
 			} else {
-				htmlcontent.append(
-						"<th style = \"border: 1px solid white;font-weight: normal;\">" + reports.get(entry).getStartTime() + "</th>");
+				htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">"
+						+ reports.get(entry).getStartTime() + "</th>");
 			}
 
 			if (reports.get(entry).getEndTime() == null) {
 				htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + "" + "</th>");
 			} else {
-				htmlcontent.append(
-						"<th style = \"border: 1px solid white;font-weight: normal;\">" + reports.get(entry).getEndTime() + "</th>");
+				htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">"
+						+ reports.get(entry).getEndTime() + "</th>");
 			}
 
 			// duration
@@ -688,15 +761,17 @@ public class Main {
 
 					Period p = new Period(d1, d2);
 
-					htmlcontent.append(
-							"<th style = \"border: 1px solid white;font-weight: normal;\">" + p.toString(new PeriodFormatterBuilder()
+					htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">"
+							+ p.toString(new PeriodFormatterBuilder()
 
 									.appendHours().appendSuffix("h").printZeroIfSupported().appendSeparator(":")
 									.appendMinutes().appendSuffix("m").printZeroIfSupported().minimumPrintedDigits(2)
 									.appendSeparator(":").appendSeconds().appendSuffix("s").minimumPrintedDigits(2)
-									.toFormatter()) + "</th>");
+									.toFormatter())
+							+ "</th>");
 				} else {
-					htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + "N/A" + "</th>");
+					htmlcontent
+							.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + "N/A" + "</th>");
 				}
 			} else {
 				// htmlcontent.append("<th style = \"border: 1px solid
@@ -709,21 +784,24 @@ public class Main {
 			}
 
 			if (reports.get(entry).getStatus() == null) {
-				htmlcontent.append("<th style = \"border: 1px solid white;color:#847d1a;font-weight: normal;\" bgcolor=\""
-						+ color_statusRunning + "\"> " + "NOT FOUND" + "</th>");
+				htmlcontent
+						.append("<th style = \"border: 1px solid white;color:#847d1a;font-weight: normal;\" bgcolor=\""
+								+ color_statusRunning + "\"> " + "NOT FOUND" + "</th>");
 				reports.get(entry).setStatus("NOT FOUND");
 
 			} else {
 
 				if (reports.get(entry).getStatus().contains(new StringBuilder("FINISH"))) {
-					htmlcontent.append("<th style = \"border: 1px solid white;color:green;font-weight: normal;\"   bgcolor=\""
-							+ color_statusSuccess + "\"> " + "SUCCESS" + "</th>");
+					htmlcontent
+							.append("<th style = \"border: 1px solid white;color:green;font-weight: normal;\"   bgcolor=\""
+									+ color_statusSuccess + "\"> " + "SUCCESS" + "</th>");
 					reports.get(entry).setStatus("SUCCESS");
 
 				} else {
 					if (reports.get(entry).getStatus().contains(new StringBuilder("RUNN"))) {
-						htmlcontent.append("<th style = \"border: 1px solid white;color:#847d1a;font-weight: normal;\" bgcolor=\""
-								+ color_statusRunning + "\"> " + reports.get(entry).getStatus() + "</th>");
+						htmlcontent
+								.append("<th style = \"border: 1px solid white;color:#847d1a;font-weight: normal;\" bgcolor=\""
+										+ color_statusRunning + "\"> " + reports.get(entry).getStatus() + "</th>");
 						reports.get(entry).setStatus("RUNNING");
 
 					} else {
@@ -748,19 +826,21 @@ public class Main {
 					htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + " " + "</th>");
 
 					htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + " " + "</th>");
-					htmlcontent.append(
-							"<th style = \"border: 1px solid white;font-weight: normal;\">" + subjobs.get(subindex).getName() + "</th>");
+					htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">"
+							+ subjobs.get(subindex).getName() + "</th>");
 					htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + " " + "</th>");
 
 					if (subjobs.get(subindex).getStartTime() == null) {
-						htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + "" + "</th>");
+						htmlcontent
+								.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + "" + "</th>");
 					} else {
 						htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">"
 								+ subjobs.get(subindex).getStartTime() + "</th>");
 					}
 
 					if (subjobs.get(subindex).getEndTime() == null) {
-						htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + "" + "</th>");
+						htmlcontent
+								.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + "" + "</th>");
 					} else {
 						htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">"
 								+ subjobs.get(subindex).getEndTime() + "</th>");
@@ -777,18 +857,20 @@ public class Main {
 
 						Period p = new Period(d1, d2);
 
-						htmlcontent.append(
-								"<th style = \"border: 1px solid white;font-weight: normal;\">" + p.toString(new PeriodFormatterBuilder()
+						htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">"
+								+ p.toString(new PeriodFormatterBuilder()
 
 										.appendHours().appendSuffix("h").printZeroIfSupported().appendSeparator(":")
 										.appendMinutes().appendSuffix("m").printZeroIfSupported()
 										.minimumPrintedDigits(2).appendSeparator(":").appendSeconds().appendSuffix("s")
-										.minimumPrintedDigits(2).toFormatter()) + "</th>");
+										.minimumPrintedDigits(2).toFormatter())
+								+ "</th>");
 
 					}
 
 					else {
-						htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + "N/A" + "</th>");
+						htmlcontent.append(
+								"<th style = \"border: 1px solid white;font-weight: normal;\">" + "N/A" + "</th>");
 					}
 					/*
 					 * }
@@ -812,26 +894,32 @@ public class Main {
 					if (subjobs.get(subindex).getStatus() != null) {
 
 						if (subjobs.get(subindex).getStatus().contains(new StringBuilder("FINISH"))) {
-							htmlcontent.append("<th style = \"border: 1px solid white; color:green;font-weight: normal;\"   bgcolor=\""
-									+ color_statusSuccess + "\"> " + "SUCCESS" + "</th>");
+							htmlcontent
+									.append("<th style = \"border: 1px solid white; color:green;font-weight: normal;\"   bgcolor=\""
+											+ color_statusSuccess + "\"> " + "SUCCESS" + "</th>");
 							subjobs.get(subindex).setStatus("SUCCESS");
 						} else {
 							if (subjobs.get(subindex).getStatus().contains(new StringBuilder("RUNN"))) {
-								htmlcontent.append("<th style = \"border: 1px solid white;color:#847d1a;font-weight: normal;\" bgcolor=\""
-										+ color_statusRunning + "\"> " + subjobs.get(subindex).getStatus() + "</th>");
+								htmlcontent
+										.append("<th style = \"border: 1px solid white;color:#847d1a;font-weight: normal;\" bgcolor=\""
+												+ color_statusRunning + "\"> " + subjobs.get(subindex).getStatus()
+												+ "</th>");
 								subjobs.get(subindex).setStatus("RUNNING");
 
 							} else {
-								htmlcontent.append("<th style = \"border: 1px solid white;color:red;font-weight: normal;\" bgcolor=\""
-										+ color_statusFail + "\"> " + subjobs.get(subindex).getStatus() + "</th>");
+								htmlcontent
+										.append("<th style = \"border: 1px solid white;color:red;font-weight: normal;\" bgcolor=\""
+												+ color_statusFail + "\"> " + subjobs.get(subindex).getStatus()
+												+ "</th>");
 								subjobs.get(subindex).setStatus("FAILURE");
 							}
 						}
 						// htmlcontent.append("</tr >");
 					} else {
 
-						htmlcontent.append("<th style = \"border: 1px solid white;color:#847d1a;font-weight: normal;\" bgcolor=\""
-								+ color_statusRunning + "\"> " + "NOT FOUND" + "</th>");
+						htmlcontent
+								.append("<th style = \"border: 1px solid white;color:#847d1a;font-weight: normal;\" bgcolor=\""
+										+ color_statusRunning + "\"> " + "NOT FOUND" + "</th>");
 						subjobs.get(subindex).setStatus("NOT FOUND");
 
 						// htmlcontent.append("</tr >");
@@ -859,30 +947,47 @@ public class Main {
 		// duration
 
 		htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + "" + "</th>");
-		
+
 		StringBuilder stuckMessage = new StringBuilder();
-		if (isATSGetStuck) stuckMessage.append("Check /opt/dataload/import foder");
-		if (isHotFolderGetStuck) stuckMessage.append(" Check /opt/dataload/import/master/twm/processing foder");
-		
+		//check stuck file in  ATS hot folder
+		if (isATSGetStuck)
+			stuckMessage.append("Check stuck ATS under /opt/dataload/import foder");
+		//check stuck file in  processing folder
+		if (isHotFolderGetStuck)
+			stuckMessage.append(" Check stuck file under /opt/dataload/import/master/twm/processing");
+		//check jammed hot folder
+		if (isHotFolderGetJammed)
+			stuckMessage.append(" Check jammed hot folder /opt/dataload/import/master/twm/");
 
-		if (isATSGetStuck || isHotFolderGetStuck) {
+		if (isATSGetStuck || isHotFolderGetStuck || isHotFolderGetJammed) {
 
-			htmlcontent.append("<th style = \"border: 1px solid white;color:red;font-weight: normal;\" bgcolor=\"" + color_statusFail
-					+ "\"> " + "FAILURE:"+stuckMessage.toString() + "</th>");
+			htmlcontent.append("<th style = \"border: 1px solid white;color:red;font-weight: normal;\" bgcolor=\""
+					+ color_statusFail + "\"> " + "FAILURE:" + stuckMessage.toString() + "</th>");
 
 		} else {
 
-			htmlcontent.append("<th style = \"border: 1px solid white;color:green;font-weight: normal;\" bgcolor=\"" + color_statusSuccess
-					+ "\"> " + "SUCCESS" + "</th>");
+			htmlcontent.append("<th style = \"border: 1px solid white;color:green;font-weight: normal;\" bgcolor=\""
+					+ color_statusSuccess + "\"> " + "SUCCESS" + "</th>");
 
 		}
 		htmlcontent.append("</tr >");
 		htmlcontent.append("</table>");
 
 		System.out.println(htmlcontent.toString());
-		accessLog.info(htmlcontent.toString());
 
 		return htmlcontent.toString();
+	}
+
+	private static void displayConnectionInfo(Connection conn) {
+
+		try {
+			System.out.println("getNetworkTimeout" + conn.getNetworkTimeout());
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		System.out.println("toString" + conn.toString());
+
 	}
 
 }
