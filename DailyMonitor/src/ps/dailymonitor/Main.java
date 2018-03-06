@@ -77,6 +77,7 @@ import com.jcraft.jsch.JSchException;
 
 import ps.dao.SearchDAO;
 import ps.util.Tool;
+import ps.util.serverFolder;
 import ps.config.MapBean;
 import ps.config.HybrisJob;
 import ps.config.Job;
@@ -92,6 +93,8 @@ public class Main {
 	private static boolean isATSGetStuck;
 	private static boolean isHotFolderGetStuck;
 	private static boolean isHotFolderGetJammed;
+	private static boolean isEventProcessed;
+	private static boolean isItemInfoProcessed;
 	private static String dateFormat = "MM/dd/yyyy HH:mm:ss";
 	private static String color_headerBG = "#1D72D1";
 	private static String color_cellLight = "#cfdef7";
@@ -99,12 +102,17 @@ public class Main {
 	private static String color_statusSuccess = "#bde8a9";
 	private static String color_statusRunning = "#eff26a";
 	private static String color_statusFail = "#e8a9b4";
+	private static String server_user, server_ip, server_password, hot_folder_arhive;
 
 	public static void main(String[] args) {
 
 		try {
 			System.out.println("11112");
 			readConfig();
+			server_user = configs.get("hotfolder.ssh.user");
+			server_ip = configs.get("hotfolder.ip");
+			server_password = configs.get("hotfolder.ssh.password");
+			hot_folder_arhive = configs.get("hotfolder.path.archive");
 			System.out.println("11113");
 			initLogger();
 
@@ -117,14 +125,28 @@ public class Main {
 				System.out.println("Starting Daily monitor report");
 				accessLog.info("Starting Daily monitor report");
 
+				serverFolder sf = new serverFolder();
+
 				isATSGetStuck = isHotFolderGetStuck(ATS_FOLDER_PATH);
 				accessLog.info("Get ATS stuck status is done");
 
 				isHotFolderGetStuck = isHotFolderGetStuck(PROCESS_FOLDER_PATH);
 				accessLog.info("Get hot folder stuck status is done");
 
-				isHotFolderGetJammed = isHotFolderJammed(HOT_FOLDER_PATH);
+				isHotFolderGetJammed = sf.isHotFolderJammed(HOT_FOLDER_PATH, server_ip, server_user, server_password);
 				accessLog.info("Get hot folder jammed status is done");
+
+				isEventProcessed = sf.isEventProcessedByPCS(HOT_FOLDER_PATH, hot_folder_arhive, server_ip, server_user,
+						server_password);
+				accessLog.info("Get event processed status is done: ==> isEventProcessed " + isEventProcessed);
+
+				isItemInfoProcessed = sf.isItemInfoProcessedByPCS(HOT_FOLDER_PATH, hot_folder_arhive, server_ip,
+						server_user, server_password);
+				accessLog
+						.info("Get item info processed status is done: ==> isItemInfoProcessed " + isItemInfoProcessed);
+
+				getHotfolderStatus();
+				accessLog.info("Get Hotfloder jobs's status is done");
 
 				getCloverJobStatus();
 				accessLog.info("Get clover jobs's status is done");
@@ -138,7 +160,10 @@ public class Main {
 								+ dt.getMonthOfYear() + "-" + dt.getDayOfMonth() + "-" + dt.getYear(),
 						null);
 				accessLog.info("Send email is done");
-				Tool.AddControlFileforFulfillment();
+				if (Tool.isAllJobDoneSuccessfully(reports, isATSGetStuck)) {
+					Tool.AddControlFileforFulfillment();
+				}
+
 				accessLog.info("Add control file is done");
 
 			} else {
@@ -155,45 +180,65 @@ public class Main {
 	}
 
 	public static void initLogger() throws IOException {
-		System.out.println("11111");
+
 		String filePath = configs.get("log.path").toString().trim();
 		System.out.println(filePath);
 		PatternLayout layout = new PatternLayout("%-5p %d %m%n");
 		RollingFileAppender appender = new RollingFileAppender(layout, filePath);
-
-		// ConsoleAppender cappender = new ConsoleAppender();
 
 		appender.setName("DailyMonitorLog");
 		appender.setMaxFileSize("1MB");
 		appender.activateOptions();
 		Logger.getRootLogger().addAppender(appender);
 		Logger.getRootLogger().setLevel(Level.INFO);
-		// System.out.println("2222");
-
-		// Logger.getRootLogger().addAppender(cappender);
 
 	}
 
 	private static void readConfig() throws FileNotFoundException {
 
-		FileReader reader = new FileReader(new File("c:\\tmp\\dailymonitornew.properties"));
+		FileReader reader = new FileReader(new File("c:\\tmp\\dailymonitor1.properties"));
 
 		Yaml yaml = new Yaml();
-		System.out.println("11111");
+
 		MapBean parsed = yaml.loadAs(reader, MapBean.class);
-		System.out.println("11111");
+
 		reports = parsed.getReports();
 		configs = parsed.getConfigrations();
-		System.out.println("11111");
+
 		for (String index : configs.keySet()) {
-			System.out.println("Key : " + index + " Value : " + configs.get(index).toString());
+			accessLog.info("Key : " + index + " Value : " + configs.get(index).toString());
 
 		}
 		for (Integer entry : reports.keySet()) {
-			System.out.println("Key : " + entry + " Value : " + reports.get(entry).toString());
+			accessLog.info("Key : " + entry + " Value : " + reports.get(entry).toString());
 
 		}
 
+	}
+
+	private static void getHotfolderStatus() {
+		for (Integer entry : reports.keySet()) {
+			// only handle clover job
+			if (reports.get(entry).getType().equalsIgnoreCase("Hotfolder")) {
+				reports.get(entry).setStartTime(null);
+				reports.get(entry).setEndTime(null);
+				reports.get(entry).setScheduled("");
+				if (reports.get(entry).getName().equalsIgnoreCase("Event_File_Processed_Before_PCS")) {
+					if (isEventProcessed) {
+						reports.get(entry).setStatus("FINISH");
+					} else {
+						reports.get(entry).setStatus("FAILURE");
+					}
+				}
+				if (reports.get(entry).getName().equalsIgnoreCase("IP13_Processed_Before_PCS")) {
+					if (isItemInfoProcessed) {
+						reports.get(entry).setStatus("FINISH");
+					} else {
+						reports.get(entry).setStatus("FAILURE");
+					}
+				}
+			}
+		}
 	}
 
 	private static void getHybrisJobStatus()
@@ -202,11 +247,12 @@ public class Main {
 
 		// String HYBRIS_DRIVER_URL =
 		// "jdbc:hybris:flexiblesearch:http://backoffice.totalwine.com/virtualjdbc/service";
-		String HYBRIS_DRIVER_URL = "jdbc:hybris:flexiblesearch:http://172.24.41.152:9001/virtualjdbc/service";
-
+		// String HYBRIS_DRIVER_URL =
+		// "jdbc:hybris:flexiblesearch:http://172.24.41.152:9001/virtualjdbc/service";
+		String HYBRIS_DRIVER_URL = "jdbc:hybris:flexiblesearch:http://backoffice.totalwine.com/virtualjdbc/service";
 		DateTime now = new DateTime();
 		DateTime dt;
-		dt = new DateTime(now.getYear(), now.getMonthOfYear(), now.getDayOfMonth(), 0, 0, 0, 0);
+		dt = new DateTime(now.getYear(), now.getMonthOfYear(), now.getDayOfMonth(), 1, 30, 0, 0);
 
 		String query = "SELECT  {c.code} AS Jobcode, {j.code} AS Jobname, {s.code} AS 'Current Status', {c.starttime} AS 'Start Time', {c.endtime} AS 'End Time', {r.code} AS 'Last Result' "
 				+ " FROM  {  Cronjob AS c    JOIN CronJobStatus AS s ON {s.pk} = {c.status}   JOIN CronJobResult AS r ON {r.pk} = {c.result}   JOIN Job AS j ON {j.pk} = {c.job} } "
@@ -226,7 +272,7 @@ public class Main {
 		Connection connection = DriverManager.getConnection(HYBRIS_DRIVER_URL, "jhung", "hhj1101");
 
 		// for test
-		displayConnectionInfo(connection);
+		// displayConnectionInfo(connection);
 		ResultSet rs = new SearchDAO().FlexableQuery(connection, FQSB.toString());
 		ArrayList<HybrisJob> jobruns = new ArrayList<HybrisJob>();
 		while (rs.next()) {
@@ -402,63 +448,6 @@ public class Main {
 	}
 
 	// Check traffic jam under /opt/dataload/import/master/twm
-	private static boolean isHotFolderJammed(String hotFolderPath) throws JSchException, IOException {
-
-		String user = configs.get("hotfolder.ssh.user");
-		String ip = configs.get("hotfolder.ip");
-		String password = configs.get("hotfolder.ssh.password");
-
-		boolean isJammed = false;
-
-		JSch jsch = new JSch();
-		Properties config = new Properties();
-		config.put("StrictHostKeyChecking", "no");
-		config.put("compression.s2c", "zlib,none");
-		config.put("compression.c2s", "zlib,none");
-
-		com.jcraft.jsch.Session session = jsch.getSession(user, ip);
-		session.setConfig(config);
-		session.setPort(22);
-		session.setPassword(password);
-		session.connect();
-		// /opt/dataload/import
-		StringBuilder outputBuffer = new StringBuilder();
-		Channel channel = session.openChannel("exec");
-
-		
-		System.out.println("cd "+hotFolderPath+" && ls -ltr --time-style=long-iso *.log | head -1 | awk '{print $6\" \"$7}' ");
-
-		((ChannelExec) channel).setCommand("cd "+hotFolderPath+" && ls -ltr --time-style=long-iso *.log | head -1 | awk '{print $6\" \"$7}' ");
-
-		InputStream commandOutput = channel.getInputStream();
-		channel.connect();
-		int readByte = commandOutput.read();
-
-		while (readByte != 0xffffffff) {
-			outputBuffer.append((char) readByte);
-			readByte = commandOutput.read();
-		}
-		System.out.println("result: "+outputBuffer.toString().trim());
-		
-		if (outputBuffer.toString().trim().length() >0) {
-			DateTimeFormatter f = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm");
-			DateTime lastdt = f.parseDateTime(outputBuffer.toString().trim());
-			
-			DateTime nowdt = new DateTime();
-			long diff = nowdt.getMillis() - lastdt.getMillis();
-			System.out.println(lastdt + "///"+nowdt+"///"+diff);
-			// Check 20 mins delay
-			if (diff > 20)
-				isJammed = true;
-		}
-		;
-
-		channel.disconnect();
-		System.out.println("isJammed:  " + isJammed);
-		return isJammed;
-
-	}
-
 	private static void getCloverJobStatus() throws IOException, SAXException, ParserConfigurationException {
 
 		CloseableHttpClient httpclient = HttpClients.createDefault();
@@ -646,7 +635,8 @@ public class Main {
 		// Check all job is done?
 		// Set To: header field of the header.
 		if (Tool.isAllJobDoneSuccessfully(reports, isATSGetStuck)) {
-			message.setSubject(reportname + ": COMPLETE -- No CloverETL/Hybris job issue [EOM]");
+			message.setSubject(reportname + ": COMPLETE -- No issues");
+
 			message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(emailtosuccess));
 			if (emailccsuccess != null) {
 				message.setRecipients(Message.RecipientType.CC, InternetAddress.parse(emailccsuccess));
@@ -949,13 +939,13 @@ public class Main {
 		htmlcontent.append("<th style = \"border: 1px solid white;font-weight: normal;\">" + "" + "</th>");
 
 		StringBuilder stuckMessage = new StringBuilder();
-		//check stuck file in  ATS hot folder
+		// check stuck file in ATS hot folder
 		if (isATSGetStuck)
 			stuckMessage.append("Check stuck ATS under /opt/dataload/import foder");
-		//check stuck file in  processing folder
+		// check stuck file in processing folder
 		if (isHotFolderGetStuck)
 			stuckMessage.append(" Check stuck file under /opt/dataload/import/master/twm/processing");
-		//check jammed hot folder
+		// check jammed hot folder
 		if (isHotFolderGetJammed)
 			stuckMessage.append(" Check jammed hot folder /opt/dataload/import/master/twm/");
 
