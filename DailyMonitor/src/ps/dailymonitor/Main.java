@@ -1,6 +1,5 @@
 package ps.dailymonitor;
 
-import java.awt.event.MouseAdapter;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -13,24 +12,21 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.logging.FileHandler;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-import javax.activation.DataHandler;
-import javax.activation.DataSource;
-import javax.activation.FileDataSource;
-
-import javax.mail.Session;
 import javax.mail.BodyPart;
 import javax.mail.Message;
 import javax.mail.MessagingException;
 import javax.mail.Multipart;
+import javax.mail.Session;
 import javax.mail.Transport;
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
@@ -53,19 +49,12 @@ import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PatternLayout;
-import org.apache.log4j.RollingFileAppender;
 import org.joda.time.DateTime;
 import org.joda.time.LocalTime;
 import org.joda.time.Period;
-import org.joda.time.PeriodType;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.PeriodFormatter;
 import org.joda.time.format.PeriodFormatterBuilder;
-import org.junit.experimental.theories.Theories;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 import org.yaml.snakeyaml.Yaml;
@@ -75,19 +64,20 @@ import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 
+import ps.config.HybrisJob;
+import ps.config.Job;
+import ps.config.MapBean;
 import ps.dao.SearchDAO;
 import ps.util.Tool;
 import ps.util.serverFolder;
-import ps.config.MapBean;
-import ps.config.HybrisJob;
-import ps.config.Job;
-import ps.config.JobExeStatus;
 
 public class Main {
+	private static final String CONFIG_FILE_PATH = "c:\\tmp\\dailymonitor2.properties";
 	private static final String PROCESS_FOLDER_PATH = "/opt/dataload/import/master/twm/processing";
 	private static final String ATS_FOLDER_PATH = "/opt/dataload/import/";
 	private static final String HOT_FOLDER_PATH = "/opt/dataload/import/master/twm/";
-	private static Logger accessLog;
+	private static final Logger accessLog = Logger.getLogger("DailyMonitorLog");
+//	private static Logger accessLog;
 	private static Map<Integer, Job> reports = new HashMap<Integer, Job>();
 	private static Map<String, String> configs = new HashMap<String, String>();
 	private static boolean isATSGetStuck;
@@ -102,21 +92,25 @@ public class Main {
 	private static String color_statusSuccess = "#bde8a9";
 	private static String color_statusRunning = "#eff26a";
 	private static String color_statusFail = "#e8a9b4";
-	private static String server_user, server_ip, server_password, hot_folder_arhive;
+	private static String server_user, server_ip, server_password, hot_folder_arhive, clover_user, clover_password,
+			clover_server_ip;
 
 	public static void main(String[] args) {
 
 		try {
-			System.out.println("11112");
+			System.out.println("Starting....");
+			
 			readConfig();
+			initLogger();
 			server_user = configs.get("hotfolder.ssh.user");
 			server_ip = configs.get("hotfolder.ip");
 			server_password = configs.get("hotfolder.ssh.password");
+			clover_user = configs.get("clover.user");
+			clover_password = configs.get("clover.password");
+			clover_server_ip = configs.get("clover.server.ip");
 			hot_folder_arhive = configs.get("hotfolder.path.archive");
 			System.out.println("11113");
-			initLogger();
 
-			accessLog = Logger.getLogger("DailyMonitorLog");
 			accessLog.setLevel(Level.INFO);
 			accessLog.info("Read Config is done");
 
@@ -172,7 +166,7 @@ public class Main {
 
 			}
 		} catch (Exception e) {
-			accessLog.info("Exception detail: ", e);
+			accessLog.info("Exception detail: " + e);
 			e.printStackTrace();
 
 		}
@@ -183,21 +177,28 @@ public class Main {
 
 		String filePath = configs.get("log.path").toString().trim();
 		System.out.println(filePath);
-		PatternLayout layout = new PatternLayout("%-5p %d %m%n");
-		RollingFileAppender appender = new RollingFileAppender(layout, filePath);
+		Handler fileHandler = null;
 
-		appender.setName("DailyMonitorLog");
-		appender.setMaxFileSize("1MB");
-		appender.activateOptions();
-		Logger.getRootLogger().addAppender(appender);
-		Logger.getRootLogger().setLevel(Level.INFO);
+		fileHandler = new FileHandler(filePath);
+		accessLog.addHandler(fileHandler);
+		fileHandler.setLevel(Level.ALL);
+		accessLog.setLevel(Level.ALL);
+		accessLog.log(Level.INFO, "Loger Configuration done.");
+//		PatternLayout layout = new PatternLayout("%-5p %d %m%n");
+//		RollingFileAppender appender = new RollingFileAppender(layout, filePath);
+//
+//		appender.setName("DailyMonitorLog");
+//		appender.setMaxFileSize("1MB");
+//		appender.activateOptions();
+//		Logger.getRootLogger().addAppender(appender);
+//		Logger.getRootLogger().setLevel(Level.INFO);
 
 	}
 
 	private static void readConfig() throws FileNotFoundException {
 
-		FileReader reader = new FileReader(new File("c:\\tmp\\dailymonitor1.properties"));
-
+//		FileReader reader = new FileReader(new File("c:\\tmp\\dailymonitor2.properties"));
+		FileReader reader = new FileReader(new File(CONFIG_FILE_PATH));
 		Yaml yaml = new Yaml();
 
 		MapBean parsed = yaml.loadAs(reader, MapBean.class);
@@ -205,14 +206,14 @@ public class Main {
 		reports = parsed.getReports();
 		configs = parsed.getConfigrations();
 
-		for (String index : configs.keySet()) {
-			accessLog.info("Key : " + index + " Value : " + configs.get(index).toString());
-
-		}
-		for (Integer entry : reports.keySet()) {
-			accessLog.info("Key : " + entry + " Value : " + reports.get(entry).toString());
-
-		}
+//		for (String index : configs.keySet()) {
+//			accessLog.info("Key : " + index + " Value : " + configs.get(index).toString());
+//
+//		}
+//		for (Integer entry : reports.keySet()) {
+//			accessLog.info("Key : " + entry + " Value : " + reports.get(entry).toString());
+//
+//		}
 
 	}
 
@@ -407,7 +408,7 @@ public class Main {
 		config.put("StrictHostKeyChecking", "no");
 		config.put("compression.s2c", "zlib,none");
 		config.put("compression.c2s", "zlib,none");
-
+//		accessLog.info(String.join(" / ", user, password, ip));
 		com.jcraft.jsch.Session session = jsch.getSession(user, ip);
 		session.setConfig(config);
 		session.setPort(22);
@@ -454,8 +455,9 @@ public class Main {
 		// CloseableHttpClient httpclient;
 
 		CredentialsProvider credsProvider = new BasicCredentialsProvider();
-		credsProvider.setCredentials(new AuthScope("104.130.35.109", 8080),
-				new UsernamePasswordCredentials("jhung", "totalwine"));
+		credsProvider.setCredentials(new AuthScope(configs.get("clover.server.ip"), 8080),
+				new UsernamePasswordCredentials(configs.get("clover.user"), configs.get("clover.password")));
+
 		httpclient = HttpClients.custom().setDefaultCredentialsProvider(credsProvider).build();
 
 		ResponseHandler<String> responseHandler = new ResponseHandler<String>() {
@@ -468,12 +470,10 @@ public class Main {
 				return entity != null ? EntityUtils.toString(entity) : null;
 				/*
 				 * if (status >= 200 && status < 300) { HttpEntity entity =
-				 * response.getEntity(); return entity != null ?
-				 * EntityUtils.toString(entity) : null; } else {
+				 * response.getEntity(); return entity != null ? EntityUtils.toString(entity) :
+				 * null; } else {
 				 * 
-				 * throw new
-				 * ClientProtocolException("Unexpected response status: " +
-				 * status); }
+				 * throw new ClientProtocolException("Unexpected response status: " + status); }
 				 */
 			}
 		};
@@ -536,8 +536,7 @@ public class Main {
 							DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss"));
 					// fix date format
 					/*
-					 * reports.get(entry)
-					 * .setStartTime(tmpdate.toString(DateTimeFormat.
+					 * reports.get(entry) .setStartTime(tmpdate.toString(DateTimeFormat.
 					 * forPattern("yyyy-MM-dd HH:mm:ss.s")));
 					 */
 					reports.get(entry).setStartTime(tmpdate.toString(DateTimeFormat.forPattern(dateFormat)));
@@ -550,8 +549,7 @@ public class Main {
 
 					// fix date format
 					/*
-					 * reports.get(entry)
-					 * .setEndTime(tmpdate.toString(DateTimeFormat.
+					 * reports.get(entry) .setEndTime(tmpdate.toString(DateTimeFormat.
 					 * forPattern("yyyy-MM-dd HH:mm:ss.s")));
 					 */
 
@@ -733,12 +731,10 @@ public class Main {
 			// duration
 			if (reports.get(entry).getStatus() != null) {
 				/*
-				 * htmlcontent.append(
-				 * "<th style = \"border: 1px solid white;\">" +
-				 * reports.get(entry).getStartTime() + "</th>");
-				 * htmlcontent.append(
-				 * "<th style = \"border: 1px solid white;\">" +
-				 * reports.get(entry).getEndTime() + "</th>");
+				 * htmlcontent.append( "<th style = \"border: 1px solid white;\">" +
+				 * reports.get(entry).getStartTime() + "</th>"); htmlcontent.append(
+				 * "<th style = \"border: 1px solid white;\">" + reports.get(entry).getEndTime()
+				 * + "</th>");
 				 */
 				// && reports.get(entry).getStatus().contains(new
 				// StringBuilder("FINISH"))) {
@@ -782,15 +778,15 @@ public class Main {
 			} else {
 
 				if (reports.get(entry).getStatus().contains(new StringBuilder("FINISH"))) {
-					htmlcontent
-							.append("<th style = \"border: 1px solid white;color:green;font-weight: normal;\"   bgcolor=\""
+					htmlcontent.append(
+							"<th style = \"border: 1px solid white;color:green;font-weight: normal;\"   bgcolor=\""
 									+ color_statusSuccess + "\"> " + "SUCCESS" + "</th>");
 					reports.get(entry).setStatus("SUCCESS");
 
 				} else {
 					if (reports.get(entry).getStatus().contains(new StringBuilder("RUNN"))) {
-						htmlcontent
-								.append("<th style = \"border: 1px solid white;color:#847d1a;font-weight: normal;\" bgcolor=\""
+						htmlcontent.append(
+								"<th style = \"border: 1px solid white;color:#847d1a;font-weight: normal;\" bgcolor=\""
 										+ color_statusRunning + "\"> " + reports.get(entry).getStatus() + "</th>");
 						reports.get(entry).setStatus("RUNNING");
 
@@ -865,15 +861,12 @@ public class Main {
 					/*
 					 * }
 					 * 
-					 * else { // htmlcontent.
-					 * append("<th style = \"border: 1px solid white;\">" + "" +
-					 * "</th>"); // htmlcontent.
-					 * append("<th style = \"border: 1px solid white;\">" + "" +
-					 * "</th>");
+					 * else { // htmlcontent. append("<th style = \"border: 1px solid white;\">" +
+					 * "" + "</th>"); // htmlcontent.
+					 * append("<th style = \"border: 1px solid white;\">" + "" + "</th>");
 					 * 
-					 * htmlcontent.
-					 * append("<th style = \"border: 1px solid white;\">" +
-					 * "N/A" + "</th>");
+					 * htmlcontent. append("<th style = \"border: 1px solid white;\">" + "N/A" +
+					 * "</th>");
 					 * 
 					 * }
 					 */
@@ -884,21 +877,21 @@ public class Main {
 					if (subjobs.get(subindex).getStatus() != null) {
 
 						if (subjobs.get(subindex).getStatus().contains(new StringBuilder("FINISH"))) {
-							htmlcontent
-									.append("<th style = \"border: 1px solid white; color:green;font-weight: normal;\"   bgcolor=\""
+							htmlcontent.append(
+									"<th style = \"border: 1px solid white; color:green;font-weight: normal;\"   bgcolor=\""
 											+ color_statusSuccess + "\"> " + "SUCCESS" + "</th>");
 							subjobs.get(subindex).setStatus("SUCCESS");
 						} else {
 							if (subjobs.get(subindex).getStatus().contains(new StringBuilder("RUNN"))) {
-								htmlcontent
-										.append("<th style = \"border: 1px solid white;color:#847d1a;font-weight: normal;\" bgcolor=\""
+								htmlcontent.append(
+										"<th style = \"border: 1px solid white;color:#847d1a;font-weight: normal;\" bgcolor=\""
 												+ color_statusRunning + "\"> " + subjobs.get(subindex).getStatus()
 												+ "</th>");
 								subjobs.get(subindex).setStatus("RUNNING");
 
 							} else {
-								htmlcontent
-										.append("<th style = \"border: 1px solid white;color:red;font-weight: normal;\" bgcolor=\""
+								htmlcontent.append(
+										"<th style = \"border: 1px solid white;color:red;font-weight: normal;\" bgcolor=\""
 												+ color_statusFail + "\"> " + subjobs.get(subindex).getStatus()
 												+ "</th>");
 								subjobs.get(subindex).setStatus("FAILURE");
@@ -907,8 +900,8 @@ public class Main {
 						// htmlcontent.append("</tr >");
 					} else {
 
-						htmlcontent
-								.append("<th style = \"border: 1px solid white;color:#847d1a;font-weight: normal;\" bgcolor=\""
+						htmlcontent.append(
+								"<th style = \"border: 1px solid white;color:#847d1a;font-weight: normal;\" bgcolor=\""
 										+ color_statusRunning + "\"> " + "NOT FOUND" + "</th>");
 						subjobs.get(subindex).setStatus("NOT FOUND");
 

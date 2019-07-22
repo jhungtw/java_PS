@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 import java.text.MessageFormat;
-import org.apache.log4j.Logger;
+import java.util.logging.Logger;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.DateTime;

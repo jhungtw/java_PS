@@ -11,18 +11,16 @@
 			<attribute name="maven.pomderived" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/lib/google-api-services-analyticsreporting-v4-rev12-1.22.0.jar"/>
-	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/lib/google-api-services-analyticsreporting-v4-rev12-1.22.0-javadoc.jar"/>
-	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/lib/hybris-virtualjdbc-5.1.0.0.jar"/>
-	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/lib/vjdbc.jar"/>
-	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/lib/joda-time-2.9.7.jar"/>
-	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/lib/maven-resources-plugin-2.7.jar"/>
 	<classpathentry kind="con" path="org.eclipse.m2e.MAVEN2_CLASSPATH_CONTAINER">
 		<attributes>
 			<attribute name="maven.pomderived" value="true"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/lib/hybris-virtualjdbc-5.1.0.0.jar"/>
+	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/lib/vjdbc.jar"/>
+	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/lib/maven-resources-plugin-2.7.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/lib/mockito-core-2.15.0.jar"/>
+	<classpathentry kind="lib" path="C:/Users/jhung/new_workspace/lib/joda-time-2.10.3.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>
