@@ -2,11 +2,8 @@ package ps.config;
 
 import java.util.Map;
 
-
-
 public class MapBean {
 
-	
 	private Map<String, String> configrations;
 
 	public Map<String, String> getConfigrations() {
@@ -18,8 +15,6 @@ public class MapBean {
 	}
 
 	private Map<Integer, Job> reports;
-	
-
 
 	public Map<Integer, Job> getReports() {
 		return reports;
@@ -28,8 +23,5 @@ public class MapBean {
 	public void setReports(Map<Integer, Job> reports) {
 		this.reports = reports;
 	}
-	
-
-
 
 }

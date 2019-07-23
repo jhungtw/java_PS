@@ -436,8 +436,8 @@ public class Main {
 		// CloseableHttpClient httpclient;
 
 		CredentialsProvider credsProvider = new BasicCredentialsProvider();
-		credsProvider.setCredentials(new AuthScope(configs.get("clover.server.ip"), 8080),
-				new UsernamePasswordCredentials(configs.get("clover.user"), configs.get("clover.password")));
+		credsProvider.setCredentials(new AuthScope(clover_server_ip, 8080),
+				new UsernamePasswordCredentials(clover_user, clover_password));
 
 		httpclient = HttpClients.custom().setDefaultCredentialsProvider(credsProvider).build();
 
@@ -940,18 +940,6 @@ public class Main {
 		System.out.println(htmlcontent.toString());
 
 		return htmlcontent.toString();
-	}
-
-	private static void displayConnectionInfo(Connection conn) {
-
-		try {
-			System.out.println("getNetworkTimeout" + conn.getNetworkTimeout());
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		System.out.println("toString" + conn.toString());
-
 	}
 
 }

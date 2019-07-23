@@ -2,13 +2,12 @@ package ps.config;
 
 import java.util.Map;
 
-
-
 public class Job {
 
 	private String type;
 	private String name;
 	private String displayname;
+
 	public String getDisplayname() {
 		return displayname;
 	}

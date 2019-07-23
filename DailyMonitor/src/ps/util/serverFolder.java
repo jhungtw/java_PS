@@ -14,7 +14,6 @@ import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
-import com.jcraft.jsch.Session;
 
 import ps.util.basic.Datetime_Validation;
 import ps.util.basic.IO_Validation;
@@ -61,7 +60,7 @@ public class serverFolder {
 	private boolean isFileExisting(String folder, String fileName, String serverip, String serverusername,
 			String serverpassword) throws JSchException, IOException {
 		boolean returnValue = true;
-		final String FLAG_EXIST = "yes";
+//		final String FLAG_EXIST = "yes";
 		final String FLAG_NOT_EXIST = "no";
 		LOGGER.info("checking on isFileExisting in " + folder);
 

@@ -3,8 +3,6 @@ package ps.util;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
-
-import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 
