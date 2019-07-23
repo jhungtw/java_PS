@@ -99,7 +99,7 @@ public class Main {
 
 		try {
 			System.out.println("Starting....");
-			
+
 			readConfig();
 			initLogger();
 			server_user = configs.get("hotfolder.ssh.user");
@@ -111,7 +111,6 @@ public class Main {
 			hot_folder_arhive = configs.get("hotfolder.path.archive");
 			System.out.println("11113");
 
-			accessLog.setLevel(Level.INFO);
 			accessLog.info("Read Config is done");
 
 			if (!Tool.isCompletedToday()) {
@@ -184,20 +183,11 @@ public class Main {
 		fileHandler.setLevel(Level.ALL);
 		accessLog.setLevel(Level.ALL);
 		accessLog.log(Level.INFO, "Loger Configuration done.");
-//		PatternLayout layout = new PatternLayout("%-5p %d %m%n");
-//		RollingFileAppender appender = new RollingFileAppender(layout, filePath);
-//
-//		appender.setName("DailyMonitorLog");
-//		appender.setMaxFileSize("1MB");
-//		appender.activateOptions();
-//		Logger.getRootLogger().addAppender(appender);
-//		Logger.getRootLogger().setLevel(Level.INFO);
 
 	}
 
 	private static void readConfig() throws FileNotFoundException {
 
-//		FileReader reader = new FileReader(new File("c:\\tmp\\dailymonitor2.properties"));
 		FileReader reader = new FileReader(new File(CONFIG_FILE_PATH));
 		Yaml yaml = new Yaml();
 
@@ -205,15 +195,6 @@ public class Main {
 
 		reports = parsed.getReports();
 		configs = parsed.getConfigrations();
-
-//		for (String index : configs.keySet()) {
-//			accessLog.info("Key : " + index + " Value : " + configs.get(index).toString());
-//
-//		}
-//		for (Integer entry : reports.keySet()) {
-//			accessLog.info("Key : " + entry + " Value : " + reports.get(entry).toString());
-//
-//		}
 
 	}
 
