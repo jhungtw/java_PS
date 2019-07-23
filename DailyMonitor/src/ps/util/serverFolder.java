@@ -130,7 +130,6 @@ public class serverFolder {
 					"cd {0} && ls -ltr --time-style=long-iso price-en*{1}* | head -1 | awk '{print $8}' | cut -d'_' -f2",
 					hotFolderPath, new LocalDate().toString(DateTimeFormat.forPattern("yyyyMMdd")));
 			LOGGER.info(linuxCommand);
-			
 
 			((ChannelExec) channel).setCommand(linuxCommand);
 
@@ -149,37 +148,37 @@ public class serverFolder {
 
 	}
 
-	public boolean isHotFolderJammed(String hotFolderPath,String serverip,String serverusername, String serverpassword) throws JSchException, IOException {
-	
+	public boolean isHotFolderJammed(String hotFolderPath, String serverip, String serverusername,
+			String serverpassword) throws JSchException, IOException {
+
 		LOGGER.info("checking on isHotFolderJammed");
-	
+
 		boolean isJammed = false;
-	
+
 		StringBuilder outputBuffer = new StringBuilder();
 
-		
 		Channel channel = getJschChannel(serverusername, serverip, serverpassword);
-	
+
 		LOGGER.info(
 				"cd " + hotFolderPath + " && ls -ltr --time-style=long-iso *.log | head -1 | awk '{print $6\" \"$7}' ");
-	
+
 		((ChannelExec) channel).setCommand(
 				"cd " + hotFolderPath + " && ls -ltr --time-style=long-iso *.log | head -1 | awk '{print $6\" \"$7}' ");
-	
+
 		InputStream commandOutput = channel.getInputStream();
 		channel.connect();
 		int readByte = commandOutput.read();
-	
+
 		while (readByte != 0xffffffff) {
 			outputBuffer.append((char) readByte);
 			readByte = commandOutput.read();
 		}
 		System.out.println("result: " + outputBuffer.toString().trim());
-	
+
 		if (outputBuffer.toString().trim().length() > 0) {
 			DateTimeFormatter f = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm");
 			DateTime lastdt = f.parseDateTime(outputBuffer.toString().trim());
-	
+
 			DateTime nowdt = new DateTime();
 			long diff = nowdt.getMillis() - lastdt.getMillis();
 			System.out.println(lastdt + "///" + nowdt + "///" + diff);
@@ -188,11 +187,11 @@ public class serverFolder {
 				isJammed = true;
 		}
 		;
-	
+
 		channel.disconnect();
 		LOGGER.info("isJammed:  " + isJammed);
 		return isJammed;
-	
+
 	}
 
 }

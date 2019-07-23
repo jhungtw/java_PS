@@ -11,21 +11,23 @@ import org.joda.time.format.DateTimeFormat;
 import ps.config.Job;
 
 public class Tool {
+	private static String CTRLFILE_PREFIX = "c:\\tmp\\control_";
+
 	public static boolean isCompletedToday() {
 		DateTime dt = new DateTime();
-		File file = new File("c:\\tmp\\control_" + dt.toString(DateTimeFormat.forPattern("yyyy-MM-dd")) + ".txt");
+		File file = new File(CTRLFILE_PREFIX + dt.toString(DateTimeFormat.forPattern("yyyy-MM-dd")) + ".txt");
 		return file.exists();
 
 	}
 
 	public static void AddControlFileforFulfillment() throws IOException {
 		DateTime dt = new DateTime();
-		File file = new File("c:\\tmp\\control_" + dt.toString(DateTimeFormat.forPattern("yyyy-MM-dd")) + ".txt");
+		File file = new File(CTRLFILE_PREFIX + dt.toString(DateTimeFormat.forPattern("yyyy-MM-dd")) + ".txt");
 		file.createNewFile();
 
 	}
 
-	public static boolean isAllJobDoneSuccessfully(Map<Integer, Job> jobs,boolean isATSGetStuck) throws IOException {
+	public static boolean isAllJobDoneSuccessfully(Map<Integer, Job> jobs, boolean isATSGetStuck) throws IOException {
 
 		boolean result = true;
 
@@ -48,10 +50,10 @@ public class Tool {
 			Map<Integer, Job> subjobs = jobs.get(entry).getSubjobs();
 
 			if (subjobs != null) {
-				
+
 				for (Integer subindex : subjobs.keySet()) {
-					System.out.println("Key : " + entry + "-----" + subjobs.get(subindex).getStatus().toLowerCase() + " Value : "
-							+ subjobs.get(subindex).toString());
+					System.out.println("Key : " + entry + "-----" + subjobs.get(subindex).getStatus().toLowerCase()
+							+ " Value : " + subjobs.get(subindex).toString());
 					if (subjobs.get(subindex).getStatus() == null) {
 						result = false;
 						break;
@@ -66,10 +68,11 @@ public class Tool {
 				}
 			}
 		}
-		
-		
-		if (isATSGetStuck){result =false;}
-		
+
+		if (isATSGetStuck) {
+			result = false;
+		}
+
 		return result;
 
 	}

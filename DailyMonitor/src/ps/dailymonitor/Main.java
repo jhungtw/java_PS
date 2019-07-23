@@ -92,7 +92,7 @@ public class Main {
 	private static String color_statusSuccess = "#bde8a9";
 	private static String color_statusRunning = "#eff26a";
 	private static String color_statusFail = "#e8a9b4";
-	private static String server_user, server_ip, server_password, hot_folder_arhive, clover_user, clover_password,
+	private static String ssh_user, server_ip, ssh_password, hot_folder_arhive, clover_user, clover_password,
 			clover_server_ip;
 
 	public static void main(String[] args) {
@@ -102,9 +102,9 @@ public class Main {
 
 			readConfig();
 			initLogger();
-			server_user = configs.get("hotfolder.ssh.user");
+			ssh_user = configs.get("hotfolder.ssh.user");
 			server_ip = configs.get("hotfolder.ip");
-			server_password = configs.get("hotfolder.ssh.password");
+			ssh_password = configs.get("hotfolder.ssh.password");
 			clover_user = configs.get("clover.user");
 			clover_password = configs.get("clover.password");
 			clover_server_ip = configs.get("clover.server.ip");
@@ -126,15 +126,15 @@ public class Main {
 				isHotFolderGetStuck = isHotFolderGetStuck(PROCESS_FOLDER_PATH);
 				accessLog.info("Get hot folder stuck status is done");
 
-				isHotFolderGetJammed = sf.isHotFolderJammed(HOT_FOLDER_PATH, server_ip, server_user, server_password);
+				isHotFolderGetJammed = sf.isHotFolderJammed(HOT_FOLDER_PATH, server_ip, ssh_user, ssh_password);
 				accessLog.info("Get hot folder jammed status is done");
 
-				isEventProcessed = sf.isEventProcessedByPCS(HOT_FOLDER_PATH, hot_folder_arhive, server_ip, server_user,
-						server_password);
+				isEventProcessed = sf.isEventProcessedByPCS(HOT_FOLDER_PATH, hot_folder_arhive, server_ip, ssh_user,
+						ssh_password);
 				accessLog.info("Get event processed status is done: ==> isEventProcessed " + isEventProcessed);
 
 				isItemInfoProcessed = sf.isItemInfoProcessedByPCS(HOT_FOLDER_PATH, hot_folder_arhive, server_ip,
-						server_user, server_password);
+						ssh_user, ssh_password);
 				accessLog
 						.info("Get item info processed status is done: ==> isItemInfoProcessed " + isItemInfoProcessed);
 
